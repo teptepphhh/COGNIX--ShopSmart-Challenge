@@ -8,6 +8,7 @@ export default function ProductsPage() {
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
+  const [sort, setSort] = useState('default');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { addToCart, cartMessage } = useCart();
@@ -40,6 +41,12 @@ export default function ProductsPage() {
     return matchesSearch && matchesCategory;
   });
 
+  // Sort a copy so the catalog order in `products` is never changed.
+  const sortedProducts = [...visibleProducts];
+  if (sort === 'price-asc') sortedProducts.sort((a, b) => a.price - b.price);
+  if (sort === 'price-desc') sortedProducts.sort((a, b) => b.price - a.price);
+  if (sort === 'name-asc') sortedProducts.sort((a, b) => a.name.localeCompare(b.name));
+
 
   return (
     <section>
@@ -62,6 +69,15 @@ export default function ProductsPage() {
             {categories.map((item) => <option key={item}>{item}</option>)}
           </select>
         </label>
+        <label>
+          <span>Sort by</span>
+          <select value={sort} onChange={(event) => setSort(event.target.value)}>
+            <option value="default">Default</option>
+            <option value="price-asc">Price: Low to High</option>
+            <option value="price-desc">Price: High to Low</option>
+            <option value="name-asc">Name: A–Z</option>
+          </select>
+        </label>
       </div>
 
       <StatusMessage>{cartMessage}</StatusMessage>
@@ -70,7 +86,7 @@ export default function ProductsPage() {
       {!loading && !error && visibleProducts.length === 0 && <StatusMessage>No products match your filters.</StatusMessage>}
 
       <div className="product-grid">
-        {visibleProducts.map((product) => (
+        {sortedProducts.map((product) => (
           <ProductCard key={product.id} product={product} onAddToCart={addToCart} />
         ))}
       </div>
