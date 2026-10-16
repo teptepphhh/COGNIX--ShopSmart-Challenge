@@ -44,3 +44,5 @@ Browser (`http://localhost:5173`, Network panel open):
 7. Server failure: stop `npm run dev`, run `npm run dev --workspace frontend`, search → error message. Restart `npm run dev`, then change the search or reload → catalog recovers.
 
 Full check: `npm run check` (lint, 4 frontend + 8 backend tests, build) passes.
+
+Screenshots of every check are in `docs/lab3_screenshots/`.

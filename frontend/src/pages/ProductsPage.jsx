@@ -39,7 +39,8 @@ export default function ProductsPage() {
         .catch((caught) => {
           if (!active) return;
           setProducts([]);
-          setError(caught.message);
+          // A network failure has no HTTP status (the server could not be reached).
+          setError(caught.status ? caught.message : 'The ShopSmart server could not be reached.');
         })
         .finally(() => active && setLoading(false));
     }, query ? SEARCH_DELAY_MS : 0);
@@ -100,7 +101,7 @@ export default function ProductsPage() {
       <StatusMessage>{cartMessage}</StatusMessage>
       {loading && <StatusMessage>{query ? `Searching for "${query}"…` : 'Loading products…'}</StatusMessage>}
       {!loading && error && (
-        <StatusMessage type="error">Could not load products: {error} Make sure the backend is running, then try again.</StatusMessage>
+        <StatusMessage type="error">Could not load products. {error} Make sure the backend is running, then try again.</StatusMessage>
       )}
       {!loading && !error && visibleProducts.length === 0 && <StatusMessage>{emptyMessage}</StatusMessage>}
 
