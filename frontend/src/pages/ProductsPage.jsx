@@ -3,10 +3,15 @@ import ProductCard from '../components/ProductCard.jsx';
 import StatusMessage from '../components/StatusMessage.jsx';
 import { useCart } from '../context/CartContext.jsx';
 import { api } from '../services/api.js';
+import {
+  filterByCategory, getCatalogCategories, getCategoryOptions, sortProducts
+} from '../utils/catalog.js';
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
+  const [catalogCategories, setCatalogCategories] = useState([]);
   const [search, setSearch] = useState('');
+  const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
   const [sort, setSort] = useState('default');
   const [loading, setLoading] = useState(true);
@@ -14,39 +19,37 @@ export default function ProductsPage() {
   const { addToCart, cartMessage } = useCart();
 
   useEffect(() => {
+    const trimmed = search.trim();
+    const timer = setTimeout(() => setQuery(trimmed), trimmed ? 300 : 0);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
     let active = true;
-    api.getProducts()
-      .then((data) => active && setProducts(data.products))
-      .catch((caught) => active && setError(caught.message))
+    setLoading(true);
+    setError('');
+    api.getProducts(query)
+      .then((data) => {
+        if (!active) return;
+        setProducts(data.products);
+        if (!query) setCatalogCategories(getCatalogCategories(data.products));
+      })
+      .catch((caught) => {
+        if (!active) return;
+        setProducts([]);
+        setError(caught.message);
+      })
       .finally(() => active && setLoading(false));
     return () => { active = false; };
-  }, []);
+  }, [query]);
 
   const categories = useMemo(
-    () => ['All', ...new Set(products.map((product) => product.category))],
-    [products]
+    () => getCategoryOptions(catalogCategories, category),
+    [catalogCategories, category]
   );
-  
-  
-  const query = search.trim().toLowerCase();
 
-  const visibleProducts = products.filter((product) => {
-    const matchesSearch =
-      product.name.toLowerCase().includes(query) ||
-      product.description.toLowerCase().includes(query);
-  
-    const matchesCategory = 
-      category === 'All' || product.category === category;
-    
-    return matchesSearch && matchesCategory;
-  });
-
-  // Sort a copy so the catalog order in `products` is never changed.
-  const sortedProducts = [...visibleProducts];
-  if (sort === 'price-asc') sortedProducts.sort((a, b) => a.price - b.price);
-  if (sort === 'price-desc') sortedProducts.sort((a, b) => b.price - a.price);
-  if (sort === 'name-asc') sortedProducts.sort((a, b) => a.name.localeCompare(b.name));
-
+  const visibleProducts = filterByCategory(products, category);
+  const sortedProducts = sortProducts(visibleProducts, sort);
 
   return (
     <section>
