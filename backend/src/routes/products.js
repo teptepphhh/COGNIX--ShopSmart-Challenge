@@ -5,7 +5,6 @@ const router = Router();
 
 router.get('/', async (request, response, next) => {
   try {
-    // LAB 3: search matches name OR description; active products only; stable id order.
     const products = await prisma.product.findMany({
       where: buildProductWhere(request.query.search),
       orderBy: { id: 'asc' }

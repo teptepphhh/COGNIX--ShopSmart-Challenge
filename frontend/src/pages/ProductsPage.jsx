@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ProductCard from '../components/ProductCard.jsx';
 import StatusMessage from '../components/StatusMessage.jsx';
 import { useCart } from '../context/CartContext.jsx';
 import { api } from '../services/api.js';
+import {
+  filterByCategory, getCatalogCategories, getCategoryOptions, sortProducts
+} from '../utils/catalog.js';
 
 // LAB 3: wait briefly after typing before asking the server, so one request
 // is sent per pause instead of one per keystroke.
@@ -10,61 +13,48 @@ const SEARCH_DELAY_MS = 300;
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
-  // LAB 3: category choices are kept separately from the search results so the
-  // dropdown does not shrink when a search returns one product or none.
-  const [categories, setCategories] = useState(['All']);
+  const [catalogCategories, setCatalogCategories] = useState([]);
   const [search, setSearch] = useState('');
+  const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
   const [sort, setSort] = useState('default');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { addToCart, cartMessage } = useCart();
 
-  const query = search.trim();
-
   // LAB 3: request matching products from the API whenever the search term changes.
   useEffect(() => {
-    let active = true; // becomes false when a newer search replaces this one
+    const trimmed = search.trim();
+    const timer = setTimeout(() => setQuery(trimmed), trimmed ? 300 : 0);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    let active = true;
     setLoading(true);
     setError('');
-
-    const timer = setTimeout(() => {
-      api.getProducts(query)
-        .then((data) => {
-          if (!active) return; // ignore an older response
-          setProducts(data.products);
-          // Grow the stable category list; never shrink it.
-          setCategories((current) => [...new Set([...current, ...data.products.map((product) => product.category)])]);
-        })
-        .catch((caught) => {
-          if (!active) return;
-          setProducts([]);
-          // A network failure has no HTTP status (the server could not be reached).
-          setError(caught.status ? caught.message : 'The ShopSmart server could not be reached.');
-        })
-        .finally(() => active && setLoading(false));
-    }, query ? SEARCH_DELAY_MS : 0);
-
-    return () => {
-      active = false;
-      clearTimeout(timer);
-    };
+    api.getProducts(query)
+      .then((data) => {
+        if (!active) return;
+        setProducts(data.products);
+        if (!query) setCatalogCategories(getCatalogCategories(data.products));
+      })
+      .catch((caught) => {
+        if (!active) return;
+        setProducts([]);
+        setError(caught.message);
+      })
+      .finally(() => active && setLoading(false));
+    return () => { active = false; };
   }, [query]);
 
-  // The server already applied the search; the page applies category and sort.
-  const visibleProducts = products.filter(
-    (product) => category === 'All' || product.category === category
+  const categories = useMemo(
+    () => getCategoryOptions(catalogCategories, category),
+    [catalogCategories, category]
   );
 
-  // Sort a copy so the catalog order in `products` is never changed.
-  const sortedProducts = [...visibleProducts];
-  if (sort === 'price-asc') sortedProducts.sort((a, b) => a.price - b.price);
-  if (sort === 'price-desc') sortedProducts.sort((a, b) => b.price - a.price);
-  if (sort === 'name-asc') sortedProducts.sort((a, b) => a.name.localeCompare(b.name));
-
-  const emptyMessage = query
-    ? `No products match "${query}"${category === 'All' ? '' : ` in ${category}`}.`
-    : 'No products match your filters.';
+  const visibleProducts = filterByCategory(products, category);
+  const sortedProducts = sortProducts(visibleProducts, sort);
 
   return (
     <section>
@@ -106,7 +96,7 @@ export default function ProductsPage() {
       {!loading && !error && visibleProducts.length === 0 && <StatusMessage>{emptyMessage}</StatusMessage>}
 
       <div className="product-grid">
-        {!loading && sortedProducts.map((product) => (
+        {!loading && !error && sortedProducts.map((product) => (
           <ProductCard key={product.id} product={product} onAddToCart={addToCart} />
         ))}
       </div>
