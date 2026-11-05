@@ -55,6 +55,11 @@ export default function ProductsPage() {
 
   const visibleProducts = filterByCategory(products, category);
   const sortedProducts = sortProducts(visibleProducts, sort);
+  // LAB 5 fix: this message was lost in the Lab 3 merge, which made `npm run check` fail
+  // and would crash the page when a search returned no products.
+  const emptyMessage = query
+    ? `No products match "${query}"${category === 'All' ? '' : ` in ${category}`}.`
+    : 'No products match your filters.';
 
   return (
     <section>

@@ -58,6 +58,17 @@ form { display: grid; gap: 1rem; }
 .empty-state, .success-card { text-align: center; padding: 4rem 1rem; }
 .recommendations { display: grid; gap: .6rem; }
 .recommendations a { background: #e6fffb; border-radius: .6rem; padding: .8rem; color: #115e59; font-weight: 700; text-decoration: none; }
+.recommendations small { color: #067647; font-weight: 600; }
+.status.warning { background: #fffaeb; border-color: #b54708; color: #7a2e0e; }
+.answer-mode { display: inline-block; border-radius: 999px; padding: .25rem .7rem; font-size: .8rem; font-weight: 800; background: #e6fffb; color: #115e59; }
+.answer-mode.rules { background: #eef2f6; color: #364152; }
+.answer-mode.no_match { background: #fff1f0; color: #7a271a; }
+.answer-text { font-size: 1.05rem; line-height: 1.55; }
+.assistant-answer h3 { font-size: 1rem; margin: 1rem 0 .5rem; }
+.answer-sources { margin-top: 1rem; border-top: 1px solid #dce3eb; padding-top: .8rem; color: #364152; }
+.answer-sources summary { cursor: pointer; font-weight: 800; }
+.answer-sources ul { margin: .6rem 0 0; padding-left: 1.1rem; display: grid; gap: .35rem; }
+.answer-sources a { color: #115e59; font-weight: 700; }
 @media (max-width: 820px) {
   .product-grid { grid-template-columns: repeat(2, 1fr); }
   .cart-layout, .details-layout, .checkout-layout, .assistant-layout { grid-template-columns: 1fr; }
