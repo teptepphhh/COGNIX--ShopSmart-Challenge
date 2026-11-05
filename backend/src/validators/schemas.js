@@ -16,3 +16,10 @@ export const orderSchema = z.object({
 export const assistantQuestionSchema = z.object({
   question: z.string().trim().min(3).max(300)
 });
+
+// Shape the AI provider must return. Gemini's JSON mode guarantees valid JSON,
+// not valid values, so the server checks every field again here.
+export const aiAssistantOutputSchema = z.object({
+  answer: z.string().trim().min(1).max(800),
+  productIds: z.array(z.number().int().positive()).max(3)
+});
