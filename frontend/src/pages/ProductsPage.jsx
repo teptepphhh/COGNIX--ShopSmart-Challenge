@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ProductCard from '../components/ProductCard.jsx';
 import StatusMessage from '../components/StatusMessage.jsx';
 import { useCart } from '../context/CartContext.jsx';
@@ -6,6 +6,10 @@ import { api } from '../services/api.js';
 import {
   filterByCategory, getCatalogCategories, getCategoryOptions, sortProducts
 } from '../utils/catalog.js';
+
+// LAB 3: wait briefly after typing before asking the server, so one request
+// is sent per pause instead of one per keystroke.
+const SEARCH_DELAY_MS = 300;
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
@@ -18,6 +22,7 @@ export default function ProductsPage() {
   const [error, setError] = useState('');
   const { addToCart, cartMessage } = useCart();
 
+  // LAB 3: request matching products from the API whenever the search term changes.
   useEffect(() => {
     const trimmed = search.trim();
     const timer = setTimeout(() => setQuery(trimmed), trimmed ? 300 : 0);
@@ -64,7 +69,7 @@ export default function ProductsPage() {
       <div className="toolbar">
         <label>
           <span>Search products</span>
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Try keyboard" />
+          <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Try keyboard" />
         </label>
         <label>
           <span>Category</span>
@@ -84,9 +89,11 @@ export default function ProductsPage() {
       </div>
 
       <StatusMessage>{cartMessage}</StatusMessage>
-      {loading && <StatusMessage>Loading products…</StatusMessage>}
-      {error && <StatusMessage type="error">{error} Make sure the backend is running.</StatusMessage>}
-      {!loading && !error && visibleProducts.length === 0 && <StatusMessage>No products match your filters.</StatusMessage>}
+      {loading && <StatusMessage>{query ? `Searching for "${query}"…` : 'Loading products…'}</StatusMessage>}
+      {!loading && error && (
+        <StatusMessage type="error">Could not load products. {error} Make sure the backend is running, then try again.</StatusMessage>
+      )}
+      {!loading && !error && visibleProducts.length === 0 && <StatusMessage>{emptyMessage}</StatusMessage>}
 
       <div className="product-grid">
         {!loading && !error && sortedProducts.map((product) => (
