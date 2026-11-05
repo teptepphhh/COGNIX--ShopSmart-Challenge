@@ -3,11 +3,15 @@ import ProductCard from '../components/ProductCard.jsx';
 import StatusMessage from '../components/StatusMessage.jsx';
 import { useCart } from '../context/CartContext.jsx';
 import { api } from '../services/api.js';
+import {
+  filterByCategory, getCatalogCategories, getCategoryOptions, sortProducts
+} from '../utils/catalog.js';
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState(['All']);
+  const [catalogCategories, setCatalogCategories] = useState([]);
   const [search, setSearch] = useState('');
+  const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
   const [sort, setSort] = useState('default');
   const [loading, setLoading] = useState(true);
@@ -15,37 +19,37 @@ export default function ProductsPage() {
   const { addToCart, cartMessage } = useCart();
 
   useEffect(() => {
+    const trimmed = search.trim();
+    const timer = setTimeout(() => setQuery(trimmed), trimmed ? 300 : 0);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
     let active = true;
     setLoading(true);
     setError('');
-
-    api.getProducts(search.trim())
+    api.getProducts(query)
       .then((data) => {
-        if (!search.trim()) {
-          setCategories(['All', ...new Set(data.products.map((product) => product.category))]);
-        }
-        if (active) setProducts(data.products);
+        if (!active) return;
+        setProducts(data.products);
+        if (!query) setCatalogCategories(getCatalogCategories(data.products));
       })
       .catch((caught) => {
-        if (active) {
-          setProducts([]);
-          setError(caught.message);
-        }
+        if (!active) return;
+        setProducts([]);
+        setError(caught.message);
       })
       .finally(() => active && setLoading(false));
     return () => { active = false; };
-  }, [search]);
+  }, [query]);
 
-  const visibleProducts = products.filter((product) => {
-    return category === 'All' || product.category === category;
-  });
+  const categories = useMemo(
+    () => getCategoryOptions(catalogCategories, category),
+    [catalogCategories, category]
+  );
 
-  // Sort a copy so the catalog order in `products` is never changed.
-  const sortedProducts = [...visibleProducts];
-  if (sort === 'price-asc') sortedProducts.sort((a, b) => a.price - b.price);
-  if (sort === 'price-desc') sortedProducts.sort((a, b) => b.price - a.price);
-  if (sort === 'name-asc') sortedProducts.sort((a, b) => a.name.localeCompare(b.name));
-
+  const visibleProducts = filterByCategory(products, category);
+  const sortedProducts = sortProducts(visibleProducts, sort);
 
   return (
     <section>

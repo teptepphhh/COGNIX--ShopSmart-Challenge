@@ -1,20 +1,12 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
+import { buildProductWhere } from '../services/productSearch.js';
 const router = Router();
 
 router.get('/', async (request, response, next) => {
   try {
-    const search = String(request.query.search || '').trim();
     const products = await prisma.product.findMany({
-      where: {
-        active: true,
-        ...(search ? {
-          OR: [
-            { name: { contains: search, mode: 'insensitive' } },
-            { description: { contains: search, mode: 'insensitive' } }
-          ]
-        } : {})
-      },
+      where: buildProductWhere(request.query.search),
       orderBy: { id: 'asc' }
     });
     response.json({ products: products.map((p) => ({ ...p, price: Number(p.price) })) });
