@@ -57,4 +57,14 @@ Remove these lines afterwards.
 
 ## Evidence
 
-Screenshots are in `docs/ai_assistant_screenshots/` (00–25). `npm run check` passes: frontend lint, backend lint, 11 frontend and 27 backend tests, and the production build.
+Screenshots are in `docs/ai_assistant_screenshots/`. `npm run check` passes: frontend lint, backend lint, 11 frontend and 27 backend tests, and the production build.
+
+- 00–25: test machine without a Gemini key (rule answers, provider failure simulation, regression and secret checks).
+- 26–29: my PC with a real Gemini key (`gemini-3.1-flash-lite`):
+  - 26 / 26b: catalog match answered by Gemini, badge "AI draft · checked against the catalog", `mode: "ai"`, verification issues `[]`.
+  - 27: no match ("Do you sell running shoes?"), provider not called, no products or sources.
+  - 27b: source check answered by Gemini (USB Headset ₱1,350 and 1080p Webcam ₱1,450), every source is a selected product.
+  - 28: provider failure (`GEMINI_BASE_URL=http://127.0.0.1:9`), rule-based fallback with notice.
+  - 29: `npm run check` on my PC, exit code 0.
+
+Product ids on my PC (8, 10, 12) differ from the test machine (2, 4, 6) because my database was reseeded in an earlier lab; names, prices and stock are the same, and every link points to the product returned in `sources`.
