@@ -13,6 +13,8 @@ AssistantPage.jsx → POST /api/assistant/questions → Zod check (422), rate li
   → { answer, recommendedProducts, sources } built from database rows
 ```
 
+Picture version: [request-flow.png](request-flow.png)
+
 The endpoint and response shape did not change. The server finds products first, then asks Gemini.
 
 ## Retrieval
