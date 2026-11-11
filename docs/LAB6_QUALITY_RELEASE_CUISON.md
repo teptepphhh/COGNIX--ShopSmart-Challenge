@@ -3,7 +3,12 @@
 Student: Yoj T. Cuison · Branch: `ASC_AI_ASSISTANT_SHOPSMART_CUISON` · Starting commit: `21b7734`
 Release type: **local release candidate only (no live staging was approved or deployed).**
 
-Screenshots are in `docs/lab6_screenshots/`. Files `01`–`26` were captured on the Linux test machine on 2026-11-11 (Asia/Manila) with PostgreSQL 16, Node 22 and no Gemini key. Files named `PC_*` were captured on my own Windows PC.
+Screenshots are in `docs/lab6_screenshots/`. Files `01`–`26` were captured on the Linux test machine on 2026-11-11 (Asia/Manila) with PostgreSQL 16, Node 22 and no Gemini key. Files named `PC_*` were captured on my own Windows PC after applying the Lab 6 commit (`35dde72`):
+
+- `PC_01_npm_run_check.png`: `npm run check` on my PC, 32 backend tests pass, build succeeds, exit code 0.
+- `PC_02_prisma_migrate_status.png`: `npx prisma migrate status`, 1 migration found, database schema up to date (no reset).
+- `PC_03_assistant_on_pc.png`: assistant on my PC with my Gemini key; the provider was unavailable, so the controlled fallback answered from the catalog.
+- `PC_04_api_down_message_on_pc.png`: assistant before the backend had started; the D1 fix shows a readable message instead of "Failed to fetch".
 
 ## 1. Baseline and feature inventory
 
@@ -44,7 +49,7 @@ Test data is fictional: Juan Dela Cruz, juan.delacruz@example.com, 123 Sample St
 | T18 | Malformed JSON / oversized body | `POST /api/orders -d '{bad'`; 200 kB question | 400 / 413 with a client error code | Before fix: code `INTERNAL_ERROR` and the raw parser text (`22_…before_after.png`) | Fail → D2, retest pass |
 | T19 | Data survival | Count rows before and after the smoke test | Earlier orders still present | 3 orders before, 4 after (the new order), products 6 (`02`, `25`) | Pass |
 | T20 | Secrets | `git ls-files`, git history, `frontend/dist` | No `.env`, key or DATABASE_URL committed or bundled | Only `.env.example` tracked; 0 keys in history; no secrets in bundle (`24_secret_checks.png`) | Pass |
-| T21 | Live Gemini (my PC) | Real key, "Which keyboard is below ₱2,000?" | Badge "AI draft · checked against the catalog" | See `PC_03_live_gemini_answer.png` | Pass when captured |
+| T21 | Live Gemini on my PC (real key in `backend/.env`) | "Which keyboard is below ₱2,000?" | AI draft badge, or a controlled fallback if the provider fails | The provider did not answer on 2026-11-11; the page showed "The AI service is unavailable right now…" and the correct catalog answer (Compact Mechanical Keyboard ₱1,850, source Product #8) (`PC_03_assistant_on_pc.png`). Live Gemini drafts were verified on this PC in Lab 5 (`docs/ai_assistant_screenshots/26_*`, `27b_*`) | Pass (controlled fallback); live AI not reconfirmed today |
 
 ## 3. Defects, diagnosis and fixes
 
@@ -88,9 +93,10 @@ Release order: (1) create the database; (2) deploy the API with its secrets, pre
 | Release check | Result |
 | --- | --- |
 | Build and tests | `npm run check` exit code 0 (`23`, and `PC_01` on my PC) |
+| Migrations | Committed migration applied, schema up to date, no reset (`PC_02`) |
 | Health and API | `/api/health` → `{"status":"ok"}`; the frontend reached `http://localhost:3000/api` (`03`, `04`) |
 | Database | Products load; order #4 placed; earlier orders 1–3 still present; no reseed (`02`, `14b`, `15`, `25`) |
-| Assistant | Grounded answer with sources (`16`); honest no-match (`17`); provider outage gives a rule answer with a notice (`18`) |
+| Assistant | Grounded answer with sources (`16`); honest no-match (`17`); provider outage gives a rule answer with a notice (`18`, and live on my PC in `PC_03`) |
 | Secrets | No `.env`, `DATABASE_URL` or key committed or in `frontend/dist` (`24`) |
 | Privacy | Only fictional customer details were used |
 
@@ -99,7 +105,7 @@ Release order: (1) create the database; (2) deploy the API with its secrets, pre
 - **Version and date:** branch `ASC_AI_ASSISTANT_SHOPSMART_CUISON`, Lab 6 commit on top of `21b7734`, 2026-11-11.
 - **Working features:** product browsing and server-side search; category and sort; cart add, change quantity and remove with stock limits; simulated checkout with server-side prices, stock decrement and validation; grounded product assistant with Gemini draft, verification and rule fallback; readable errors when the API or AI provider is unavailable.
 - **Fixed in this release:** D1 readable network errors; D2 `INVALID_JSON` / `PAYLOAD_TOO_LARGE` client errors with trace IDs; D3 field-level checkout errors; D4 literal `%`/`_` search. Added `npm run db:deploy` and `npm start` at the root.
-- **Known limitations:** no authentication or roles; cart not persisted across refresh; assistant may miss word variants such as "studying"; `db:seed` resets orders; health check does not test the database.
+- **Known limitations:** live Gemini drafting was unavailable during final verification on 2026-11-11 (the fallback answered correctly; it worked in Lab 5); no authentication or roles; cart not persisted across refresh; assistant may miss word variants such as "studying"; `db:seed` resets orders; health check does not test the database.
 - **Local startup:** follow `README.md` steps 1–11 (create `backend/.env` and `frontend/.env` from the examples, `npm install`, `npm run db:generate`, `npm run db:migrate`, `npm run db:seed` once, `npm run check`, `npm run dev`). Optional: add `GEMINI_API_KEY` to `backend/.env` for live AI drafts.
 - **Deployment status:** **local release candidate only.** No private staging or live site was deployed because no hosting was approved.
 - **Team record (individual submission, Yoj T. Cuison):**
