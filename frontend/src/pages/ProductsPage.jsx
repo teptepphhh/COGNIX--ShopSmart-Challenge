@@ -96,7 +96,7 @@ export default function ProductsPage() {
       <StatusMessage>{cartMessage}</StatusMessage>
       {loading && <StatusMessage>{query ? `Searching for "${query}"…` : 'Loading products…'}</StatusMessage>}
       {!loading && error && (
-        <StatusMessage type="error">Could not load products. {error} Make sure the backend is running, then try again.</StatusMessage>
+        <StatusMessage type="error">Could not load products. {error}</StatusMessage>
       )}
       {!loading && !error && visibleProducts.length === 0 && <StatusMessage>{emptyMessage}</StatusMessage>}
 

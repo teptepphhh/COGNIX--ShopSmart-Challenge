@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildProductWhere, normalizeSearch } from '../src/services/productSearch.js';
+import { buildProductWhere, escapeLikePattern, normalizeSearch } from '../src/services/productSearch.js';
 
 test('normalizeSearch trims and handles missing values', () => {
   assert.equal(normalizeSearch('  keyboard  '), 'keyboard');
@@ -22,4 +22,11 @@ test('search matches name OR description case-insensitively and stays active-onl
       { description: { contains: 'Wireless', mode: 'insensitive' } }
     ]
   });
+});
+
+test('LIKE wildcards in a search are matched literally (Lab 6 defect D4)', () => {
+  assert.equal(escapeLikePattern('100%'), '100\\%');
+  assert.equal(escapeLikePattern('usb_c'), 'usb\\_c');
+  assert.equal(escapeLikePattern('a\\b'), 'a\\\\b');
+  assert.equal(buildProductWhere('%').OR[0].name.contains, '\\%');
 });

@@ -1,6 +1,10 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
-async function request(path, { timeoutMs, ...options } = {}) {
+// LAB 6 fix: fetch() rejects with a bare "Failed to fetch" TypeError when the API is down.
+// Every page now receives one readable message instead of the browser's wording.
+export const NETWORK_ERROR_MESSAGE = 'ShopSmart could not reach the server. Check that the backend is running, then try again.';
+
+export async function request(path, { timeoutMs, ...options } = {}) {
   // LAB 5: optional timeout so a slow request can never leave the page loading forever.
   const controller = timeoutMs ? new AbortController() : null;
   const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
@@ -12,8 +16,8 @@ async function request(path, { timeoutMs, ...options } = {}) {
       headers: { 'Content-Type': 'application/json', ...options.headers }
     });
   } catch (caught) {
-    if (caught.name === 'AbortError') throw new Error('The server took too long to respond. Please try again.');
-    throw caught;
+    if (caught.name === 'AbortError') throw Object.assign(new Error('The server took too long to respond. Please try again.'), { code: 'TIMEOUT' });
+    throw Object.assign(new Error(NETWORK_ERROR_MESSAGE), { code: 'NETWORK_ERROR' });
   } finally {
     if (timer) clearTimeout(timer);
   }
@@ -24,6 +28,7 @@ async function request(path, { timeoutMs, ...options } = {}) {
     const error = new Error(message);
     error.status = response.status;
     error.code = data?.error?.code;
+    error.details = data?.error?.details;
     throw error;
   }
   return data;

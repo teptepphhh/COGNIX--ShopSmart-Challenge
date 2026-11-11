@@ -321,5 +321,9 @@ Confirm that the front end uses http://localhost:5173 and that `FRONTEND_URL=htt
 | `npm run db:migrate` | Create or update database tables |
 | `npm run db:seed` | Reset and insert sample data |
 | `npm run db:studio` | Open the Prisma database viewer |
+| `npm run db:deploy` | Apply committed migrations without resetting data (deployment; `prisma migrate deploy`) |
+| `npm start` | Start only the API with Node (deployment) |
 
 Read `docs/TEACHING_ROADMAP.md` for the weekly improvement plan.
+
+The final laboratory (quality, defects fixed, deployment plan and release note) is documented in `docs/LAB6_QUALITY_RELEASE_CUISON.md`.

@@ -4,12 +4,13 @@ import StatusMessage from '../components/StatusMessage.jsx';
 import { useCart } from '../context/CartContext.jsx';
 import { api } from '../services/api.js';
 import { calculateItemSubtotal } from '../utils/cart.js';
+import { describeOrderError } from '../utils/orderErrors.js';
 
 export default function CheckoutPage() {
   const { cart, total, clearCart } = useCart();
   const [form, setForm] = useState({ customerName: '', email: '', address: '' });
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
   const [order, setOrder] = useState(null);
 
   function updateField(event) {
@@ -18,7 +19,7 @@ export default function CheckoutPage() {
 
   async function submitOrder(event) {
     event.preventDefault();
-    setError('');
+    setError(null);
     setSubmitting(true);
     try {
       const created = await api.createOrder({
@@ -28,7 +29,7 @@ export default function CheckoutPage() {
       setOrder(created);
       clearCart();
     } catch (caught) {
-      setError(caught.message);
+      setError(describeOrderError(caught));
     } finally {
       setSubmitting(false);
     }
@@ -50,7 +51,10 @@ export default function CheckoutPage() {
     <section className="checkout-layout">
       <form onSubmit={submitOrder}>
         <p className="eyebrow">SIMULATED CHECKOUT</p><h1>Delivery information</h1>
-        <StatusMessage type="error">{error}</StatusMessage>
+        <StatusMessage type="error">{error && <>
+          {error.message}
+          {error.fields.length > 0 && <ul className="field-errors">{error.fields.map((line) => <li key={line}>{line}</li>)}</ul>}
+        </>}</StatusMessage>
         <label>Full name<input name="customerName" value={form.customerName} onChange={updateField} minLength="2" maxLength="80" required /></label>
         <label>Email address<input name="email" type="email" value={form.email} onChange={updateField} required /></label>
         <label>Delivery address<textarea name="address" value={form.address} onChange={updateField} minLength="10" maxLength="300" required /></label>

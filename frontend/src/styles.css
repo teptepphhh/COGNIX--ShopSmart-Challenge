@@ -80,3 +80,6 @@ form { display: grid; gap: 1rem; }
   .toolbar, .product-grid { grid-template-columns: 1fr; }
   .cart-item { grid-template-columns: 1fr; }
 }
+
+/* LAB 6: field-level checkout errors */
+.field-errors { margin: 0.4rem 0 0; padding-left: 1.2rem; }

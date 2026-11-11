@@ -20,9 +20,7 @@ export default function AssistantPage() {
   async function ask(event) {
     event.preventDefault(); setError(''); setResult(null); setLoading(true);
     try { setResult(await api.askAssistant(question)); }
-    catch (caught) {
-      setError(caught instanceof TypeError ? 'ShopSmart could not reach the server. Check that the backend is running, then try again.' : caught.message);
-    }
+    catch (caught) { setError(caught.message); }
     finally { setLoading(false); }
   }
 
