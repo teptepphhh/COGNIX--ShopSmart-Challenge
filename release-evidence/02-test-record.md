@@ -122,6 +122,40 @@ Stock of Wireless Mouse before Case 3: `GET /api/products/1` → `"stock":4`, `u
 
 ---
 
+
+---
+
+## Case 4 – Stock rule
+
+### 4a. Out-of-stock product cannot be added in the browser
+| Field | Record |
+|---|---|
+| Starting state | USB-C Study Lamp (product 3) has stock 0 |
+| Action and test data | View the product card on the home page, then open its Details page |
+| Expected result | The product is shown as unavailable and "Add to cart" is disabled on both pages |
+| Observed result and evidence | Card shows "Out of stock" in red with a disabled "Add to cart" button. Details page (`/products/3`) shows "0 unit(s) available" with a disabled "Add to cart" button. Evidence: `screenshots/02-4a-lamp-out-of-stock.png`, `screenshots/02-4a-lamp-details.png` |
+| Decision | **Pass** |
+
+### 4b. Direct API order for an out-of-stock product is refused
+| Field | Record |
+|---|---|
+| Starting state | Study Lamp stock 0 (`updatedAt` 2026-10-08) |
+| Action and test data | Bypass the browser: `curl.exe -i -X POST http://localhost:3000/api/orders` with fictional customer details and `items: [{productId: 3, quantity: 1}]` |
+| Expected result | 409 `INSUFFICIENT_STOCK`; no order created; stock stays 0 |
+| Observed result and evidence | **`HTTP/1.1 409 Conflict`**, body `{"error":{"code":"INSUFFICIENT_STOCK","message":"Only 0 unit(s) of USB-C Study Lamp are available."}}` (Content-Length 101). Afterwards `GET /api/products/3` → `"stock":0`, `updatedAt` still 2026-10-08 (unchanged). Evidence: `screenshots/02-4b-api-insufficient-stock.png`, `screenshots/02-4b-lamp-stock-unchanged.png` |
+| Decision | **Pass** – the stock rule is enforced on the server, not only by the disabled button |
+
+### 4c. Two customers buy the same product (stale cart)
+| Field | Record |
+|---|---|
+| Starting state | 1080p Webcam (product 4) stock 4. Two browser tabs, each with its own cart |
+| Action and test data | **Tab A:** add Webcam, set quantity to 4 (₱5,800), do not check out yet. **Tab B:** add Webcam × 1 and check out as `Maria Santos`, `maria.santos@example.com`, `45 Rizal Avenue, Barangay Dos, Sample City`. **Tab A:** check out the 4 webcams as `Juan Dela Cruz` |
+| Expected result | Tab B succeeds and stock becomes 3. Tab A is refused with "Only 3 unit(s) of 1080p Webcam are available."; no order is created for Tab A; Tab A's cart is unchanged; final stock 3 |
+| Observed result and evidence | Before: `"stock":4`. Tab A cart: Webcam × 4, total ₱5,800, header Cart (4). Tab B: "Thank you, Maria Santos!", order **#10**, Total **₱1,450.00**, Cart (0). Tab A checkout: error "Only 3 unit(s) of 1080p Webcam are available." shown in the error style; header still Cart (4); order review still Qty 4, ₱5,800; no confirmation shown. After: `GET /api/products/4` → `"stock":3`, `updatedAt 2026-11-12T14:28:44.497Z` (only Maria's order reduced the stock). Evidence: `screenshots/02-4c-webcam-stock-before.png`, `screenshots/02-4c-tabA-cart.png`, `screenshots/02-4c-tabB-order-success.png`, `screenshots/02-4c-tabA-insufficient-stock.png`, `screenshots/02-4c-webcam-stock-after.png` |
+| Decision | **Pass** – the server rejects the stale cart (status code expected 409 `INSUFFICIENT_STOCK` per `orders.js`; not captured in the screenshot) |
+
+Note: Tab A's cart allowed quantity 4 because the cart copies `stock` when an item is added and does not refresh it (baseline observation 11). This is a UX limitation only; the server is the real guard.
+
 ## Additional observations
 - On page load, DevTools shows two `GET /api/products` requests (both 200). This is expected in development because the app uses React StrictMode, which runs effects twice; production builds call it once.
 - The Console shows `GET /favicon.ico 404 (Not Found)`: the frontend has no favicon. Cosmetic only; no functional impact. Not fixed (low priority).
