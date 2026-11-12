@@ -1,0 +1,85 @@
+Activity 5 - local release candidate smoke test
+Date: 2026-11-12 23:32 MPST
+Commit: c6b9ff6 on ASC_DEPLOYMENT_SHOPSMART_REVANO
+App: backend http://localhost:3000 (node src/server.js), frontend http://localhost:5173 (vite dev), PostgreSQL localhost:5432
+Test data: fictional customer only (Juan Dela Cruz). Security headers from Helmet are left out below to keep it short.
+
+=== 1. Health ===
+> curl.exe -i http://localhost:3000/api/health
+HTTP/1.1 200 OK
+X-Content-Type-Options: nosniff
+Access-Control-Allow-Origin: http://localhost:5173
+X-Request-ID: 47b69331-3d2d-4b37-9104-98b4382acff9
+Content-Type: application/json; charset=utf-8
+Content-Length: 31
+Date: Thu, 12 Nov 2026 15:32:43 GMT
+
+{"status":"ok","database":"ok"}
+
+
+=== 2. Products list ===
+> curl.exe -s http://localhost:3000/api/products
+{"products":[{"id":1,"name":"Wireless Mouse","description":"Quiet wireless mouse with adjustable sensitivity and USB receiver.","category":"Accessories","emoji":"🖱️","price":650,"stock":3,"active":true,"createdAt":"2026-09-10T09:47:06.991Z","updatedAt":"2026-11-12T14:11:04.240Z"},{"id":2,"name":"Compact Mechanical Keyboard","description":"Hot-swappable compact keyboard with tactile switches.","category":"Accessories","emoji":"⌨️","price":1850,"stock":7,"active":true,"createdAt":"2026-09-10T09:47:06.991Z","updatedAt":"2026-10-08T09:07:35.961Z"},{"id":3,"name":"USB-C Study Lamp","description":"Adjustable desk lamp with three brightness levels.","category":"Study","emoji":"💡","price":900,"stock":0,"active":true,"createdAt":"2026-09-10T09:47:06.991Z","updatedAt":"2026-10-08T09:08:36.583Z"},{"id":4,"name":"1080p Webcam","description":"Full HD webcam with privacy cover and built-in microphone.","category":"Video","emoji":"📷","price":1450,"stock":3,"active":true,"createdAt":"2026-09-10T09:47:06.991Z","updatedAt":"2026-11-12T14:28:44.497Z"},{"id":5,"name":"Laptop Stand","description":"Foldable aluminum stand for laptops up to 16 inches.","category":"Study","emoji":"💻","price":1200,"stock":7,"active":true,"createdAt":"2026-09-10T09:47:06.991Z","updatedAt":"2026-10-15T12:06:25.609Z"},{"id":6,"name":"USB Headset","description":"Over-ear headset with noise-reducing boom microphone.","category":"Audio","emoji":"🎧","price":1350,"stock":6,"active":true,"createdAt":"2026-09-10T09:47:06.991Z","updatedAt":"2026-10-08T09:19:19.439Z"}]}
+Summary:
+  6 products: #1 Wireless Mouse P650 stock 3; #2 Compact Mechanical Keyboard P1850 stock 7; #3 USB-C Study Lamp P900 stock 0; #4 1080p Webcam P1450 stock 3; #5 Laptop Stand P1200 stock 7; #6 USB Headset P1350 stock 6
+
+=== 3. Laptop Stand (product 5) stock BEFORE the order ===
+> curl.exe -s http://localhost:3000/api/products/5
+{"id":5,"name":"Laptop Stand","description":"Foldable aluminum stand for laptops up to 16 inches.","category":"Study","emoji":"💻","price":1200,"stock":7,"active":true,"createdAt":"2026-09-10T09:47:06.991Z","updatedAt":"2026-10-15T12:06:25.609Z"}
+
+=== 4. Create ONE order (1 x Laptop Stand, productId 5) ===
+> curl.exe -i -X POST http://localhost:3000/api/orders -H "Content-Type: application/json" --data-binary @order.json
+  order.json: {"customerName":"Juan Dela Cruz","email":"juan.delacruz@example.com","address":"123 Mabini Street, Barangay Uno, Sample City","items":[{"productId":5,"quantity":1}]}
+HTTP/1.1 201 Created
+X-Content-Type-Options: nosniff
+Access-Control-Allow-Origin: http://localhost:5173
+X-Request-ID: 2312519e-4624-4885-94c5-dfce91865f77
+Content-Type: application/json; charset=utf-8
+Content-Length: 282
+Date: Thu, 12 Nov 2026 15:32:43 GMT
+
+{"id":11,"customerName":"Juan Dela Cruz","email":"juan.delacruz@example.com","address":"123 Mabini Street, Barangay Uno, Sample City","status":"PENDING","total":1200,"createdAt":"2026-11-12T15:32:43.544Z","items":[{"id":14,"orderId":11,"productId":5,"quantity":1,"unitPrice":1200}]}
+
+
+=== 5. Laptop Stand (product 5) stock AFTER the order ===
+> curl.exe -s http://localhost:3000/api/products/5
+{"id":5,"name":"Laptop Stand","description":"Foldable aluminum stand for laptops up to 16 inches.","category":"Study","emoji":"💻","price":1200,"stock":6,"active":true,"createdAt":"2026-09-10T09:47:06.991Z","updatedAt":"2026-11-12T15:32:43.529Z"}
+
+Order check:
+  New order id: #11 (greater than 10: yes), total 1200, unitPrice 1200, status PENDING
+  Laptop Stand stock: 7 -> 6 (went down by 1: correct)
+
+=== 6. Assistant question ===
+> curl.exe -s -i -X POST http://localhost:3000/api/assistant/questions -H "Content-Type: application/json" --data-binary @ask.json
+  ask.json: {"question":"Which keyboard is below ₱2,000?"}
+HTTP/1.1 200 OK
+X-Content-Type-Options: nosniff
+Access-Control-Allow-Origin: http://localhost:5173
+X-Request-ID: a30a6ef7-ae47-48c4-8a8c-ec137b77943e
+Content-Type: application/json; charset=utf-8
+Content-Length: 293
+Date: Thu, 12 Nov 2026 15:32:47 GMT
+
+{"answer":"We have the Compact Mechanical Keyboard available for ₱1,850, which fits your budget perfectly!","recommendedProducts":[{"id":2,"name":"Compact Mechanical Keyboard","price":1850,"category":"Accessories"}],"sources":[{"type":"product","id":2,"name":"Compact Mechanical Keyboard"}]}
+[time_total: 3.492325s]
+
+Backend log lines for this smoke test:
+GET /api/health 200 1.524 ms
+GET /api/products 200 1.438 ms
+GET /api/products/5 200 1.682 ms
+POST /api/orders 201 48.484 ms
+GET /api/products/5 200 2.230 ms
+POST /api/assistant/questions 200 3481.474 ms
+
+=== 7. Earlier orders still exist (read-only Prisma query, ids and counts only, run from backend/) ===
+Order ids in the database: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
+Total orders: 11. Orders #1 to #10 present: yes
+Products: 6 (no reseed: product ids 1-6 unchanged, stock values are not the seed values)
+
+=== Notes ===
+- The assistant answered with a live Gemini answer this time: no fallback note in the answer and no 'fallback reason=' line in the backend log. It took about 3.5 s.
+  In Activity 2 the provider failed (503 and TIMEOUT) and the fallback was used, so both paths have been seen.
+- Only ONE order was created in this smoke test (#11). It uses fictional data.
+- The cart lives in the browser only (React state), so curl cannot test it. Cart behavior was verified in Activity 2 Case 2,
+  and again in a real browser in Activity 3 (03-d1-browser-check.txt).
+- Result: PASS (health, products, order, stock, assistant).
