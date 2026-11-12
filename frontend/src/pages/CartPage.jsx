@@ -1,14 +1,40 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import StatusMessage from '../components/StatusMessage.jsx';
 import { useCart } from '../context/CartContext.jsx';
+import { parseQuantityDraft } from '../utils/cart.js';
+
+// D1: the box keeps what the customer types as a draft. The cart only changes on
+// blur or Enter, so typing "10" is checked as 10, not as 1 and then 0.
+// CartPage gives this component key={item.quantity}, so the draft resets when the quantity changes.
+function QuantityInput({ item, onCommit }) {
+  const [draft, setDraft] = useState(String(item.quantity));
+
+  function commit() {
+    const quantity = parseQuantityDraft(draft);
+    if (quantity !== item.quantity) onCommit(quantity);
+    // If the value was refused, the cart keeps the old quantity, so show it again.
+    setDraft(String(item.quantity));
+  }
+
+  return (
+    <input id={`quantity-${item.productId}`} type="number" min="1" max={item.stock} value={draft}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') { event.preventDefault(); commit(); }
+        if (event.key === 'Escape') setDraft(String(item.quantity));
+      }} />
+  );
+}
 
 export default function CartPage() {
-  const { cart, total, cartMessage, setQuantity, removeFromCart, itemCount } = useCart();
+  const { cart, total, cartMessage, cartMessageType, setQuantity, removeFromCart, itemCount } = useCart();
 
   return (
     <section>
       <div className="page-heading"><p className="eyebrow">YOUR ORDER</p><h1>Shopping cart</h1></div>
-      <StatusMessage type={cartMessage.startsWith('Only') ? 'error' : 'info'}>{cartMessage}</StatusMessage>
+      <StatusMessage type={cartMessageType}>{cartMessage}</StatusMessage>
       {cart.length === 0 ? (
         <div className="empty-state"><h2>Your cart is empty</h2><Link className="button" to="/">Browse products</Link></div>
       ) : (
@@ -23,8 +49,8 @@ export default function CartPage() {
                     <button type="button" aria-label={`Decrease quantity of ${item.name}`}
                       disabled={item.quantity <= 1}
                       onClick={() => setQuantity(item.productId, item.quantity - 1)}>−</button>
-                    <input id={`quantity-${item.productId}`} type="number" min="1" max={item.stock} value={item.quantity}
-                      onChange={(event) => setQuantity(item.productId, Number(event.target.value))} />
+                    <QuantityInput key={item.quantity} item={item}
+                      onCommit={(quantity) => setQuantity(item.productId, quantity)} />
                     <button type="button" aria-label={`Increase quantity of ${item.name}`}
                       disabled={item.quantity >= item.stock}
                       onClick={() => setQuantity(item.productId, item.quantity + 1)}>+</button>

@@ -212,7 +212,17 @@ Observed naturally during Case 5: the provider returned HTTP 503 and later timed
 
 ## Defect log
 
-### D1 – Typing a multi-digit cart quantity saves the first digit (Severity: Medium, Status: Open)
+Status after Activity 3 (details in `03-fix-and-verify.md`):
+
+| ID | Defect | Severity | Status |
+|---|---|---|---|
+| D1 | Typing a multi-digit cart quantity saves the first digit | Medium | **Fixed** |
+| D2 | Zero-quantity message uses the info style | Low | **Fixed** |
+| D3 | Checkout errors do not say which field is invalid | Low | Open |
+| D4 | Fallback assistant recommends a product matched only by a category word | Low | Open |
+| D5 | Health endpoint reports "ok" while the database is down | Medium | **Fixed** |
+
+### D1 – Typing a multi-digit cart quantity saves the first digit (Severity: Medium, Status: Fixed)
 | Field | Record |
 |---|---|
 | Starting state | Cart contains Wireless Mouse × 4 (stock 4) and Laptop Stand × 1; total ₱3,800 |
@@ -222,8 +232,10 @@ Observed naturally during Case 5: the provider returned HTTP 503 and later timed
 | Impact | The customer's quantity is changed silently while the message suggests nothing changed; the customer could check out with fewer items than intended |
 | Suspected cause | `frontend/src/pages/CartPage.jsx`: the quantity input calls `setQuantity(..., Number(event.target.value))` on every keystroke, so intermediate values are committed |
 | Evidence | `screenshots/02-2-cart-step5.png` |
+| Fix | The quantity box keeps a draft of what is typed. The cart only changes on blur or Enter. Files: `frontend/src/pages/CartPage.jsx`, `frontend/src/utils/cart.js` |
+| Repeat test after fix | 2026-11-12, real browser (Edge): typed `10` into Mouse × 3 (stock 3). After `1` and `0` the total stayed ₱3,150. On Enter, "Only 3 unit(s) are available." in red and the box went back to 3. **Pass.** Evidence: `03-d1-browser-check.txt` |
 
-### D2 – Zero-quantity message uses the info style instead of the error style (Severity: Low, Status: Open)
+### D2 – Zero-quantity message uses the info style instead of the error style (Severity: Low, Status: Fixed)
 | Field | Record |
 |---|---|
 | Starting state | Cart contains Wireless Mouse × 4 and Laptop Stand × 1 |
@@ -233,8 +245,8 @@ Observed naturally during Case 5: the provider returned HTTP 503 and later timed
 | Impact | Cosmetic/UX only; the invalid value is still refused |
 | Suspected cause | `frontend/src/pages/CartPage.jsx`: the error style is chosen only when the message starts with "Only" |
 | Evidence | `screenshots/02-2-cart-step6.png` |
-
-
+| Fix | The cart now stores a message type (`error` or `info`) next to the message. The page uses that type instead of checking the first word. Files: `frontend/src/context/CartContext.jsx`, `frontend/src/pages/CartPage.jsx` |
+| Repeat test after fix | 2026-11-12, real browser (Edge): typed `0` and left the box. "Quantity must be a whole number greater than zero." in the red error style; quantity stayed 3. **Pass.** Evidence: `03-d1-browser-check.txt` |
 
 ### D3 – Checkout errors do not say which field is invalid (Severity: Low, Status: Open)
 | Field | Record |
@@ -246,8 +258,8 @@ Observed naturally during Case 5: the provider returned HTTP 503 and later timed
 | Impact | Usability only; invalid input is still correctly refused by the server |
 | Suspected cause | `frontend/src/services/api.js` keeps only `error.message`; `CheckoutPage.jsx` displays that message and ignores `error.details` |
 | Evidence | `screenshots/02-3a-response-details.png`, `screenshots/02-3b-response-details.png` |
-
-
+| Why not fixed | Low impact, and it needs changes in both `api.js` and `CheckoutPage.jsx`. Left for a later release. |
+| Safe temporary limitation | The server still refuses bad input and no order is created. The form keeps the typed values. The release note tells testers to check the email and the address (at least 10 real characters) if they see this message. |
 
 ### D4 – Fallback assistant recommends a product matched only by category word (Severity: Low, Status: Open)
 | Field | Record |
@@ -259,11 +271,10 @@ Observed naturally during Case 5: the provider returned HTTP 503 and later timed
 | Impact | Low: the answer is grounded (real product, correct price, source shown) and the out-of-stock lamp is never recommended, but the suggestion may mislead the customer |
 | Suspected cause | `backend/src/services/assistant.js` `rankProducts`: one matching keyword (including category words) is enough; only the AI path can judge that no product fits |
 | Evidence | `screenshots/02-5c-assistant-out-of-stock.png` |
+| Why not fixed | It only happens in the rule-based fallback, and changing the ranking rules could break the assistant behavior and tests from the earlier assistant lab. Left for a later release. |
+| Safe temporary limitation | The out-of-stock lamp is never recommended, and every suggestion is a real product with its real price and a source link. The fallback note tells the customer that the AI was not used. The release note lists this. |
 
-
-
-
-### D5 – Health endpoint reports "ok" while the database is down (Severity: Medium, Status: Open)
+### D5 – Health endpoint reports "ok" while the database is down (Severity: Medium, Status: Fixed)
 | Field | Record |
 |---|---|
 | Starting state | Backend running; PostgreSQL service stopped |
@@ -273,3 +284,5 @@ Observed naturally during Case 5: the provider returned HTTP 503 and later timed
 | Impact | A hosting platform or evaluator relying on `/api/health` would see a healthy service while customers cannot load products or place orders |
 | Suspected cause | `backend/src/app.js`: `/api/health` returns a static response and never checks the database |
 | Evidence | `screenshots/02-6b-health-db-down.png`, `screenshots/02-6b-backend-log-db-down.png` |
+| Fix | `/api/health` now runs `SELECT 1` on the database with a 2 second limit. Database up: 200 `{"status":"ok","database":"ok"}`. Database down: 503 `{"status":"error","database":"unreachable"}`, with no error details. File: `backend/src/app.js`. Tests: `backend/test/health.test.js` |
+| Repeat test after fix | 2026-11-12: PostgreSQL running → `200 OK` `{"status":"ok","database":"ok"}`. PostgreSQL stopped → `503 Service Unavailable` `{"status":"error","database":"unreachable"}` in about 2 s. PostgreSQL started again → `200 OK`, and product 4 still had stock 3. **Pass.** Evidence: `03-health-db-up.txt`, `03-health-db-down.txt`, `03-health-db-recovered.txt` |

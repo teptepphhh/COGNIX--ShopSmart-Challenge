@@ -1,0 +1,454 @@
+
+> shopsmart-starter@1.0.0 check
+> npm run lint --workspace frontend && npm run lint --workspace backend && npm run test && npm run build
+
+
+> shopsmart-frontend@1.0.0 lint
+> eslint .
+
+
+> shopsmart-backend@1.0.0 lint
+> eslint .
+
+
+> shopsmart-starter@1.0.0 test
+> npm run test --workspace frontend && npm run test --workspace backend
+
+
+> shopsmart-frontend@1.0.0 test
+> vitest run
+
+
+ RUN  v3.2.7 C:/Users/Stephanie Joy Revano/Documents/BSIT4A-PDC50/ShopSmart-Starter/frontend
+
+ ✓ src/utils/cart.test.js (8 tests) 4ms
+ ✓ src/utils/catalog.test.js (7 tests) 12ms
+
+ Test Files  2 passed (2)
+      Tests  15 passed (15)
+   Start at  23:25:26
+   Duration  872ms (transform 53ms, setup 0ms, collect 102ms, tests 16ms, environment 0ms, prepare 790ms)
+
+
+> shopsmart-backend@1.0.0 test
+> node --test
+
+TAP version 13
+# Subtest: parseBudget extracts a peso budget
+ok 1 - parseBudget extracts a peso budget
+  ---
+  duration_ms: 3.4006
+  type: 'test'
+  ...
+# Subtest: rankProducts respects the budget
+ok 2 - rankProducts respects the budget
+  ---
+  duration_ms: 1.1605
+  type: 'test'
+  ...
+# Subtest: assistant response contains traceable sources
+ok 3 - assistant response contains traceable sources
+  ---
+  duration_ms: 26.5267
+  type: 'test'
+  ...
+# Subtest: retrieval: the keyboard question returns only the in-budget keyboard, with no score-0 filler
+ok 4 - retrieval: the keyboard question returns only the in-budget keyboard, with no score-0 filler
+  ---
+  duration_ms: 0.6538
+  type: 'test'
+  ...
+# Subtest: retrieval: "2,000" parses to 2000 and does not create a "000" keyword
+ok 5 - retrieval: "2,000" parses to 2000 and does not create a "000" keyword
+  ---
+  duration_ms: 0.3148
+  type: 'test'
+  ...
+# Subtest: retrieval: "1080p webcam" has no budget and still finds the webcam
+ok 6 - retrieval: "1080p webcam" has no budget and still finds the webcam
+  ---
+  duration_ms: 0.4
+  type: 'test'
+  ...
+# Subtest: retrieval: a number is only a budget with a cue word or currency
+ok 7 - retrieval: a number is only a budget with a cue word or currency
+  ---
+  duration_ms: 0.4815
+  type: 'test'
+  ...
+# Subtest: retrieval: stock-0 and inactive products are never retrieved
+ok 8 - retrieval: stock-0 and inactive products are never retrieved
+  ---
+  duration_ms: 0.5672
+  type: 'test'
+  ...
+# Subtest: retrieval: unrelated or empty questions match nothing, budget-only questions match by price
+ok 9 - retrieval: unrelated or empty questions match nothing, budget-only questions match by price
+  ---
+  duration_ms: 0.764
+  type: 'test'
+  ...
+# Subtest: rule-based response lists DB prices and adds a note only when one is given
+ok 10 - rule-based response lists DB prices and adds a note only when one is given
+  ---
+  duration_ms: 2.1052
+  type: 'test'
+  ...
+# Subtest: case 1: the keyboard question returns only the keyboard, with the DB price and a source
+ok 11 - case 1: the keyboard question returns only the keyboard, with the DB price and a source
+  ---
+  duration_ms: 5.3364
+  type: 'test'
+  ...
+# Subtest: case 2: a product category that does not exist gives an honest no-match and never calls the provider
+ok 12 - case 2: a product category that does not exist gives an honest no-match and never calls the provider
+  ---
+  duration_ms: 0.6727
+  type: 'test'
+  ...
+# Subtest: case 3: a question shorter than 3 characters fails validation
+ok 13 - case 3: a question shorter than 3 characters fails validation
+  ---
+  duration_ms: 0.5884
+  type: 'test'
+  ...
+# Subtest: case 4: a stock-0 product is never sent to the provider or recommended, even if the AI names it
+ok 14 - case 4: a stock-0 product is never sent to the provider or recommended, even if the AI names it
+  ---
+  duration_ms: 15.7229
+  type: 'test'
+  ...
+# Subtest: case 4: when the AI says nothing fits, the honest answer is returned with no products or sources
+ok 15 - case 4: when the AI says nothing fits, the honest answer is returned with no products or sources
+  ---
+  duration_ms: 0.5741
+  type: 'test'
+  ...
+# Subtest: case 4: an empty selection that still mentions a price falls back
+ok 16 - case 4: an empty selection that still mentions a price falls back
+  ---
+  duration_ms: 0.4724
+  type: 'test'
+  ...
+# Subtest: case 4: the AI may not call a selected in-stock product unavailable
+ok 17 - case 4: the AI may not call a selected in-stock product unavailable
+  ---
+  duration_ms: 0.5528
+  type: 'test'
+  ...
+# Subtest: case 4: the AI may say an unlisted product is unavailable while recommending an in-stock one
+ok 18 - case 4: the AI may say an unlisted product is unavailable while recommending an in-stock one
+  ---
+  duration_ms: 0.505
+  type: 'test'
+  ...
+# Subtest: case 5: provider failure (TIMEOUT) falls back to catalog results with a note
+ok 19 - case 5: provider failure (TIMEOUT) falls back to catalog results with a note
+  ---
+  duration_ms: 1.2792
+  type: 'test'
+  ...
+# Subtest: case 5: provider failure (RATE_LIMITED) falls back to catalog results with a note
+ok 20 - case 5: provider failure (RATE_LIMITED) falls back to catalog results with a note
+  ---
+  duration_ms: 0.7911
+  type: 'test'
+  ...
+# Subtest: case 5: provider failure (PROVIDER_ERROR) falls back to catalog results with a note
+ok 21 - case 5: provider failure (PROVIDER_ERROR) falls back to catalog results with a note
+  ---
+  duration_ms: 0.4978
+  type: 'test'
+  ...
+# Subtest: case 5: provider failure (PROVIDER_ERROR) falls back to catalog results with a note
+ok 22 - case 5: provider failure (PROVIDER_ERROR) falls back to catalog results with a note
+  ---
+  duration_ms: 0.3142
+  type: 'test'
+  ...
+# Subtest: case 5: no API key falls back without calling anything
+ok 23 - case 5: no API key falls back without calling anything
+  ---
+  duration_ms: 0.2911
+  type: 'test'
+  ...
+# Subtest: case 5: a real Gemini provider that never answers times out and falls back
+ok 24 - case 5: a real Gemini provider that never answers times out and falls back
+  ---
+  duration_ms: 29.1079
+  type: 'test'
+  ...
+# Subtest: case 5: a Gemini 429 through the real provider is reported as RATE_LIMITED
+ok 25 - case 5: a Gemini 429 through the real provider is reported as RATE_LIMITED
+  ---
+  duration_ms: 0.6053
+  type: 'test'
+  ...
+# Subtest: case 5: an invalid AI response (answer missing) falls back
+ok 26 - case 5: an invalid AI response (answer missing) falls back
+  ---
+  duration_ms: 0.3326
+  type: 'test'
+  ...
+# Subtest: case 5: an invalid AI response (productIds not integers) falls back
+ok 27 - case 5: an invalid AI response (productIds not integers) falls back
+  ---
+  duration_ms: 0.4128
+  type: 'test'
+  ...
+# Subtest: case 5: an invalid AI response (too many productIds) falls back
+ok 28 - case 5: an invalid AI response (too many productIds) falls back
+  ---
+  duration_ms: 0.3698
+  type: 'test'
+  ...
+# Subtest: case 5: an invalid AI response (empty answer) falls back
+ok 29 - case 5: an invalid AI response (empty answer) falls back
+  ---
+  duration_ms: 0.3749
+  type: 'test'
+  ...
+# Subtest: case 5: an invalid AI response (not an object) falls back
+ok 30 - case 5: an invalid AI response (not an object) falls back
+  ---
+  duration_ms: 0.2562
+  type: 'test'
+  ...
+# Subtest: case 5: invalid JSON from Gemini falls back
+ok 31 - case 5: invalid JSON from Gemini falls back
+  ---
+  duration_ms: 0.7278
+  type: 'test'
+  ...
+# Subtest: case 6: invented ids are dropped and every returned id is in the retrieved set
+ok 32 - case 6: invented ids are dropped and every returned id is in the retrieved set
+  ---
+  duration_ms: 0.6317
+  type: 'test'
+  ...
+# Subtest: case 6: when only invented ids remain, the answer falls back to retrieved products
+ok 33 - case 6: when only invented ids remain, the answer falls back to retrieved products
+  ---
+  duration_ms: 0.5481
+  type: 'test'
+  ...
+# Subtest: case 6: prices come from the database even if the AI omits them
+ok 34 - case 6: prices come from the database even if the AI omits them
+  ---
+  duration_ms: 0.203
+  type: 'test'
+  ...
+# Subtest: verification: a wrong price in the answer text falls back
+ok 35 - verification: a wrong price in the answer text falls back
+  ---
+  duration_ms: 0.3415
+  type: 'test'
+  ...
+# Subtest: verification: a price of a product that was not selected falls back
+ok 36 - verification: a price of a product that was not selected falls back
+  ---
+  duration_ms: 0.2603
+  type: 'test'
+  ...
+# Subtest: verification: correct prices in several formats are accepted
+ok 37 - verification: correct prices in several formats are accepted
+  ---
+  duration_ms: 0.4698
+  type: 'test'
+  ...
+# Subtest: verification: product names and specs such as "1080p" are not treated as prices
+ok 38 - verification: product names and specs such as "1080p" are not treated as prices
+  ---
+  duration_ms: 0.1869
+  type: 'test'
+  ...
+# Subtest: verification: every supported price format is extracted, so a wrong price cannot slip through
+ok 39 - verification: every supported price format is extracted, so a wrong price cannot slip through
+  ---
+  duration_ms: 0.3128
+  type: 'test'
+  ...
+# Subtest: live finding: naming and pricing a product without selecting it is rejected as unverified
+ok 40 - live finding: naming and pricing a product without selecting it is rejected as unverified
+  ---
+  duration_ms: 0.3567
+  type: 'test'
+  ...
+# Subtest: live finding: the same draft is accepted when the AI selects the product it prices
+ok 41 - live finding: the same draft is accepted when the AI selects the product it prices
+  ---
+  duration_ms: 0.1746
+  type: 'test'
+  ...
+# Subtest: fallback note: provider problems say the AI is unavailable
+ok 42 - fallback note: provider problems say the AI is unavailable
+  ---
+  duration_ms: 0.3324
+  type: 'test'
+  ...
+# Subtest: fallback note: drafts that fail verification say they could not be verified
+ok 43 - fallback note: drafts that fail verification say they could not be verified
+  ---
+  duration_ms: 0.2487
+  type: 'test'
+  ...
+# Subtest: the system instruction forbids naming products that are not selected
+ok 44 - the system instruction forbids naming products that are not selected
+  ---
+  duration_ms: 0.1849
+  type: 'test'
+  ...
+# POST /api/assistant/questions 422 7.853 ms
+# POST /api/assistant/questions 422 1.029 ms
+# POST /api/assistant/questions 422 0.598 ms
+# POST /api/assistant/questions 422 1.168 ms
+# POST /api/assistant/questions 422 0.857 ms
+# POST /api/assistant/questions 422 0.839 ms
+# POST /api/assistant/questions 422 0.665 ms
+# POST /api/assistant/questions 422 0.440 ms
+# POST /api/assistant/questions 422 0.682 ms
+# POST /api/assistant/questions 422 0.432 ms
+# POST /api/assistant/questions 422 0.441 ms
+# POST /api/assistant/questions 422 0.578 ms
+# POST /api/assistant/questions 422 0.680 ms
+# POST /api/assistant/questions 422 0.332 ms
+# POST /api/assistant/questions 422 0.265 ms
+# POST /api/assistant/questions 422 0.236 ms
+# POST /api/assistant/questions 422 0.232 ms
+# POST /api/assistant/questions 422 0.284 ms
+# POST /api/assistant/questions 422 0.259 ms
+# POST /api/assistant/questions 422 0.363 ms
+# POST /api/assistant/questions 429 0.457 ms
+# Subtest: POST /api/assistant/questions: short questions get 422 and the rate limit returns JSON
+ok 45 - POST /api/assistant/questions: short questions get 422 and the rate limit returns JSON
+  ---
+  duration_ms: 169.6901
+  type: 'test'
+  ...
+# Subtest: test\\fixtures\\catalog.js
+ok 4 - test\\fixtures\\catalog.js
+  ---
+  duration_ms: 74.7737
+  type: 'test'
+  ...
+# Subtest: no key or a blank key means no provider
+ok 47 - no key or a blank key means no provider
+  ---
+  duration_ms: 0.8174
+  type: 'test'
+  ...
+# Subtest: model defaults to gemini-3.5-flash-lite and can be overridden
+ok 48 - model defaults to gemini-3.5-flash-lite and can be overridden
+  ---
+  duration_ms: 0.2011
+  type: 'test'
+  ...
+# Subtest: only id, name, category, description, numeric price and stock are sent
+ok 49 - only id, name, category, description, numeric price and stock are sent
+  ---
+  duration_ms: 0.6632
+  type: 'test'
+  ...
+# Subtest: the request uses structured JSON output, the system rules and the question as data
+ok 50 - the request uses structured JSON output, the system rules and the question as data
+  ---
+  duration_ms: 0.6973
+  type: 'test'
+  ...
+# Subtest: a hanging request is aborted and reported as TIMEOUT
+ok 51 - a hanging request is aborted and reported as TIMEOUT
+  ---
+  duration_ms: 24.2655
+  type: 'test'
+  ...
+# Subtest: errors are classified as RATE_LIMITED, PROVIDER_ERROR, TIMEOUT or INVALID_RESPONSE
+ok 52 - errors are classified as RATE_LIMITED, PROVIDER_ERROR, TIMEOUT or INVALID_RESPONSE
+  ---
+  duration_ms: 0.6974
+  type: 'test'
+  ...
+# GET /api/health 200 1.901 ms
+# Subtest: health returns 200 with database ok when the database answers
+ok 53 - health returns 200 with database ok when the database answers
+  ---
+  duration_ms: 49.9154
+  type: 'test'
+  ...
+# [health] database check failed
+# GET /api/health 503 0.797 ms
+# Subtest: health returns 503 when the database check fails, without error details
+ok 54 - health returns 503 when the database check fails, without error details
+  ---
+  duration_ms: 10.3906
+  type: 'test'
+  ...
+# [health] database check failed
+# GET /api/health 503 57.327 ms
+# Subtest: health returns 503 quickly when the database check hangs
+ok 55 - health returns 503 quickly when the database check hangs
+  ---
+  duration_ms: 63.4445
+  type: 'test'
+  ...
+# Subtest: normalizeSearch trims and handles missing values
+ok 56 - normalizeSearch trims and handles missing values
+  ---
+  duration_ms: 1.8241
+  type: 'test'
+  ...
+# Subtest: absent or whitespace-only search returns the full active catalog filter
+ok 57 - absent or whitespace-only search returns the full active catalog filter
+  ---
+  duration_ms: 1.2093
+  type: 'test'
+  ...
+# Subtest: search matches name OR description case-insensitively and stays active-only
+ok 58 - search matches name OR description case-insensitively and stays active-only
+  ---
+  duration_ms: 0.495
+  type: 'test'
+  ...
+# Subtest: a valid classroom order passes validation
+ok 59 - a valid classroom order passes validation
+  ---
+  duration_ms: 3.654
+  type: 'test'
+  ...
+# Subtest: duplicate products fail order validation
+ok 60 - duplicate products fail order validation
+  ---
+  duration_ms: 0.7661
+  type: 'test'
+  ...
+# Subtest: an oversized assistant question fails validation
+ok 61 - an oversized assistant question fails validation
+  ---
+  duration_ms: 0.8188
+  type: 'test'
+  ...
+1..61
+# tests 61
+# suites 0
+# pass 61
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 977.2648
+
+> shopsmart-starter@1.0.0 build
+> npm run build --workspace frontend
+
+
+> shopsmart-frontend@1.0.0 build
+> vite build
+
+vite v7.3.6 building client environment for production...
+transforming...
+✓ 53 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.49 kB │ gzip:  0.30 kB
+dist/assets/index-DZ4WV2Ad.css    5.18 kB │ gzip:  1.68 kB
+dist/assets/index-DEY4yVab.js   275.07 kB │ gzip: 87.08 kB
+✓ built in 1.01s

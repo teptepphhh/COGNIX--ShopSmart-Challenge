@@ -1,0 +1,30 @@
+Activity 3 - D5 repeat test after fix: database RUNNING
+Date: 2026-11-12 23:25 MPST
+Command: curl.exe -i http://localhost:3000/api/health
+------------------------------------------------------------
+HTTP/1.1 200 OK
+Content-Security-Policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+Access-Control-Allow-Origin: http://localhost:5173
+Vary: Origin
+X-Request-ID: 900ffcd1-3392-4c89-817e-dc07a8bac06f
+Content-Type: application/json; charset=utf-8
+Content-Length: 31
+ETag: W/"1f-BpqhEqpdZCOoeu+u00DH07BauVA"
+Date: Thu, 12 Nov 2026 15:25:42 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"status":"ok","database":"ok"}
+
+[time_total: 0.005876s]

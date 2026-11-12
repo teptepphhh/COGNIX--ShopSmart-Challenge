@@ -43,6 +43,13 @@ export function addProductToCart(cart, product) {
   };
 }
 
+// Turns the text typed in the quantity box into a number. Blank text gives NaN,
+// which updateCartQuantity refuses like any other invalid quantity.
+export function parseQuantityDraft(draft) {
+  const text = String(draft ?? '').trim();
+  return text === '' ? Number.NaN : Number(text);
+}
+
 export function updateCartQuantity(cart, productId, quantity) {
   const item = findCartItem(cart, productId);
   if (!item) return { cart, error: 'Cart item could not be found.' };
