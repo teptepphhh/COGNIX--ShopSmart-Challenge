@@ -37,7 +37,7 @@ Authentication and roles are absent in this version, so guest/owner/other-custom
 | Starting state | Home page, search box cleared |
 | Action and test data | Select Category `Study`, then type `webcam` |
 | Expected result | No products (webcam is in "Video"); "No products match your filters." is shown; the Category list still contains all categories |
-| Observed result and evidence | No product cards; message "No products match your filters." shown. Request `GET /api/products?search=webcam` → 200 OK, Content-Length 269 (the API returns the webcam; the client-side "Study" filter correctly hides it). Category list still shows All, Accessories, Study, Video, Audio. Evidence: `screenshots/02-1c-category-search.png`, `screenshots/02-1c-category-options.png` |
+| Observed result and evidence | No product cards; message "No products match your filters." shown. Request `GET /api/products?search=webcam` → 200 OK, Content-Length 269 (the API returns the webcam; the client-side "Study" filter correctly hides it). Category list still shows All, Accessories, Study, Video, Audio. Evidence: `screenshots/02-1c-category-search.png`. The category list was checked by opening the dropdown; there is no separate screenshot of the open list. |
 | Decision | Pass |
 
 ---
@@ -63,26 +63,6 @@ Authentication and roles are absent in this version, so guest/owner/other-custom
 | 2.7 | Click **Remove** on Laptop Stand | 4 / ₱2,600 | 4 / ₱2,600 – header Cart (4) | Message "Item removed from cart." – Pass. `screenshots/02-2-cart-step7.png` |
 | 2.8 | Press **F5** (refresh) | Team design: cart kept in React state only, so it empties | 0 / – header Cart (0), "Your cart is empty" | Matches the current design – Pass (known limitation: cart is not persisted). `screenshots/02-2-cart-step8-refresh.png` |
 
-## Case 2 – Cart
-
-| Field | Record |
-|---|---|
-| Starting state | Cart (0); Wireless Mouse ₱650 (stock 4), Laptop Stand ₱1,200 (stock 7) |
-| Action and test data | Steps 2.1–2.8 in the table below, run in one session without reloading until step 2.8 |
-| Expected result | Totals and item counts match the expected values at every step; invalid quantities are refused without changing the cart |
-| Observed result and evidence | See the step table below |
-| Decision | **Fail** – step 2.5 changed the cart quantity unexpectedly (Defect D1); step 2.6 shows a minor style issue (Defect D2). All totals were arithmetically correct for the quantities shown. |
-
-| Step | Action | Expected items / total | Observed items / total | Notes |
-|---|---|---|---|---|
-| 2.1 | Add Wireless Mouse | 1 / ₱650 | 1 / ₱650 – header Cart (1) | Message "Wireless Mouse was added to your cart." – Pass. `screenshots/02-2-cart-step1.png` |
-| 2.2 | Add Laptop Stand | 2 / ₱1,850 | 2 / ₱1,850 – header Cart (2) | Message "Laptop Stand was added to your cart." – Pass. `screenshots/02-2-cart-step2.png` |
-| 2.3 | Open Cart, click **+** on Wireless Mouse | 3 / ₱2,500 | 3 / ₱2,500 | Mouse 2 × ₱650 = ₱1,300; Laptop Stand ₱1,200; **−** disabled on Laptop Stand at quantity 1 – Pass. `screenshots/02-2-cart-step3.png` |
-| 2.4 | Click **+** until the Mouse quantity is 4 | 5 / ₱3,800 | 5 / ₱3,800 | Mouse 4 × ₱650 = ₱2,600; **+** disabled at stock limit 4 – Pass. `screenshots/02-2-cart-step4.png` |
-| 2.5 | Select the Mouse quantity (`Ctrl + A`) and type `10` | 5 / ₱3,800 (unchanged) | **2 / ₱1,850** – Mouse quantity became **1** | Error message "Only 4 unit(s) are available." shown in red, but the first keystroke `1` was saved as the quantity before `0` was refused – **Fail (D1)**. `screenshots/02-2-cart-step5.png` |
-| 2.6 | Mouse restored to 4 with **+**; select the quantity and type `0` | 5 / ₱3,800 (unchanged) | 5 / ₱3,800 – quantity stayed 4 | Message "Quantity must be a whole number greater than zero." shown in the **info (teal) style**, not the red error style – Pass with minor defect **D2**. `screenshots/02-2-cart-step6.png` |
-| 2.7 | Click **Remove** on Laptop Stand | 4 / ₱2,600 | 4 / ₱2,600 – header Cart (4) | Message "Item removed from cart." – Pass. `screenshots/02-2-cart-step7.png` |
-| 2.8 | Press **F5** (refresh) | Team design: cart kept in React state only, so it empties | 0 / – header Cart (0), "Your cart is empty" | Matches the current design – Pass (known limitation: cart is not persisted). `screenshots/02-2-cart-step8-refresh.png` |
 
 
 
@@ -209,10 +189,10 @@ Backend log for this case: `screenshots/02-5-backend-log.png`. During testing th
 ### 6a. API server stopped (frontend running)
 | Field | Record |
 |---|---|
-| Starting state | Frontend running with `npm run dev --workspace frontend`; backend stopped (`Ctrl + C`). One tab prepared on the checkout page with Laptop Stand × 1 and fictional details |
+| Starting state | Frontend running with `npm run dev --workspace frontend`; backend stopped (`Ctrl + C`). One tab prepared on the checkout page with Laptop Stand × 1 |
 | Action and test data | (1) Click "Place simulated order"; (2) reload the Products page; (3) ask the assistant `Which keyboard is below ₱2,000?` |
 | Expected result | Each request ends and shows a useful error; no endless loading; the cart and form data are kept; no order is created |
-| Observed result and evidence | (1) Checkout: "Could not reach the ShopSmart server." in the error style; header still Cart (1); form values kept; no order created. (2) Products: "Could not reach the ShopSmart server. Make sure the backend is running."; no "Loading products…" left on screen. (3) Assistant: "Could not reach the ShopSmart server."; the button returned to "Ask ShopSmart". Evidence: `screenshots/02-6a-checkout-api-down.png`, `screenshots/02-6a-products-api-down.png`, `screenshots/02-6a-assistant-api-down.png` |
+| Observed result and evidence | (1) Checkout: "Could not reach the ShopSmart server." in the error style; header still Cart (1); form values kept; loading ended. No order was created, because the API was down and the request never reached the server. (2) Products: "Could not reach the ShopSmart server. Make sure the backend is running."; no "Loading products…" left on screen. (3) Assistant: "Could not reach the ShopSmart server."; the button returned to "Ask ShopSmart". Evidence: `screenshots/02-6a-products-api-down.png`, `screenshots/02-6a-assistant-api-down.png`. The checkout screenshot was removed because the browser had autofilled my real name, email and address into the form. That was real personal data, not fictional test data. No replacement screenshot was taken. |
 | Decision | **Pass** |
 
 ### 6b. Database stopped (API running)
