@@ -84,12 +84,51 @@ Authentication and roles are absent in this version, so guest/owner/other-custom
 | 2.7 | Click **Remove** on Laptop Stand | 4 / ₱2,600 | 4 / ₱2,600 – header Cart (4) | Message "Item removed from cart." – Pass. `screenshots/02-2-cart-step7.png` |
 | 2.8 | Press **F5** (refresh) | Team design: cart kept in React state only, so it empties | 0 / – header Cart (0), "Your cart is empty" | Matches the current design – Pass (known limitation: cart is not persisted). `screenshots/02-2-cart-step8-refresh.png` |
 
+
+
+
+---
+
+## Case 3 – Simulated checkout
+
+Stock of Wireless Mouse before Case 3: `GET /api/products/1` → `"stock":4`, `updatedAt` 2026-11-05. Evidence: `screenshots/02-3-stock-before.png`
+
+### 3a. Invalid email is refused
+| Field | Record |
+|---|---|
+| Starting state | Cart (1): Wireless Mouse × 1; checkout form open |
+| Action and test data | Name `Juan Dela Cruz`, email `juan@test`, address `123 Mabini Street, Sample City`; click "Place simulated order" |
+| Expected result | The browser allows the value (HTML email check), but the server refuses it with 422; an error is shown; no order is created; the cart is unchanged |
+| Observed result and evidence | `POST /api/orders` → **422 Unprocessable Entity**. Page shows "Check the customer and cart information." in the error style; button returned to "Place simulated order"; form values kept. Response `details.fieldErrors`: `{email: ["Invalid email address"]}`. Evidence: `screenshots/02-3a-checkout-invalid-email.png`, `screenshots/02-3a-status.png`, `screenshots/02-3a-response-details.png` |
+| Decision | **Pass** (input refused). Minor defect **D3**: the page does not say which field is wrong. |
+
+### 3b. Address containing only spaces is refused
+| Field | Record |
+|---|---|
+| Starting state | Same cart; form open after 3a |
+| Action and test data | Email changed to `juan.delacruz@example.com`; address set to 12 spaces; click "Place simulated order" |
+| Expected result | The browser allows 12 spaces (`required` and `minLength="10"` pass), but the server trims the value and refuses it with 422; no order is created |
+| Observed result and evidence | `POST /api/orders` → **422**. Same message "Check the customer and cart information." Response `details.fieldErrors`: `{address: ["Too small: expected string to have >=10 characters"]}`. Evidence: `screenshots/02-3b-checkout-blank-address.png`, `screenshots/02-3b-response-details.png` |
+| Decision | **Pass** (server-side validation catches what the browser allows). Same minor defect **D3**. |
+
+### 3c. Valid fictional details create one order
+| Field | Record |
+|---|---|
+| Starting state | Same cart (Wireless Mouse × 1); stock 4 |
+| Action and test data | Name `Juan Dela Cruz`, email `juan.delacruz@example.com`, address `123 Mabini Street, Barangay Uno, Sample City`; click "Place simulated order" **once** |
+| Expected result | 201; one order created with the server's price; confirmation with order number and total ₱650.00; cart cleared; Mouse stock reduced from 4 to 3 |
+| Observed result and evidence | `POST /api/orders` → **201**, 186 ms (only one 201 request in the log). Page: "Thank you, Juan Dela Cruz!", order **#9**, Total **₱650.00**; header Cart (0). Response: `id 9`, `status "PENDING"`, `total 650`, `items [{productId 1, quantity 1, unitPrice 650}]`, `createdAt 2026-11-12T14:11:04.262Z`. After the order, `GET /api/products/1` → `"stock":3`, `updatedAt 2026-11-12T14:11:04.240Z` (same transaction). Evidence: `screenshots/02-3c-checkout-success.png`, `screenshots/02-3c-response-details.png`, `screenshots/02-3c-stock-after-order.png` |
+| Decision | **Pass** |
+
 ---
 
 ## Additional observations
 - On page load, DevTools shows two `GET /api/products` requests (both 200). This is expected in development because the app uses React StrictMode, which runs effects twice; production builds call it once.
 - The Console shows `GET /favicon.ico 404 (Not Found)`: the frontend has no favicon. Cosmetic only; no functional impact. Not fixed (low priority).
 
+
+- The new order received id #9, which shows that earlier orders (#1–#8 from previous labs) are still in the database; no reseed occurred.
+- Order prices come from the server: the response shows `unitPrice 650` and `total 650` taken from the database, not from the browser.
 
 ---
 
@@ -119,3 +158,16 @@ Authentication and roles are absent in this version, so guest/owner/other-custom
 | Impact | Cosmetic/UX only; the invalid value is still refused |
 | Suspected cause | `frontend/src/pages/CartPage.jsx`: the error style is chosen only when the message starts with "Only" |
 | Evidence | `screenshots/02-2-cart-step6.png` |
+
+
+
+### D3 – Checkout errors do not say which field is invalid (Severity: Low, Status: Open)
+| Field | Record |
+|---|---|
+| Starting state | Checkout form with Wireless Mouse × 1 in the cart |
+| Action | Submit with email `juan@test` (3a), or with an address of only spaces (3b) |
+| Actual result | The page shows only "Check the customer and cart information." The API response already contains the field-level reason (`fieldErrors.email` / `fieldErrors.address`), but it is not displayed |
+| Expected result | The customer is told which field to correct (for example, "Email: Invalid email address") |
+| Impact | Usability only; invalid input is still correctly refused by the server |
+| Suspected cause | `frontend/src/services/api.js` keeps only `error.message`; `CheckoutPage.jsx` displays that message and ignores `error.details` |
+| Evidence | `screenshots/02-3a-response-details.png`, `screenshots/02-3b-response-details.png` |
