@@ -152,9 +152,44 @@ Stock of Wireless Mouse before Case 3: `GET /api/products/1` → `"stock":4`, `u
 | Action and test data | **Tab A:** add Webcam, set quantity to 4 (₱5,800), do not check out yet. **Tab B:** add Webcam × 1 and check out as `Maria Santos`, `maria.santos@example.com`, `45 Rizal Avenue, Barangay Dos, Sample City`. **Tab A:** check out the 4 webcams as `Juan Dela Cruz` |
 | Expected result | Tab B succeeds and stock becomes 3. Tab A is refused with "Only 3 unit(s) of 1080p Webcam are available."; no order is created for Tab A; Tab A's cart is unchanged; final stock 3 |
 | Observed result and evidence | Before: `"stock":4`. Tab A cart: Webcam × 4, total ₱5,800, header Cart (4). Tab B: "Thank you, Maria Santos!", order **#10**, Total **₱1,450.00**, Cart (0). Tab A checkout: error "Only 3 unit(s) of 1080p Webcam are available." shown in the error style; header still Cart (4); order review still Qty 4, ₱5,800; no confirmation shown. After: `GET /api/products/4` → `"stock":3`, `updatedAt 2026-11-12T14:28:44.497Z` (only Maria's order reduced the stock). Evidence: `screenshots/02-4c-webcam-stock-before.png`, `screenshots/02-4c-tabA-cart.png`, `screenshots/02-4c-tabB-order-success.png`, `screenshots/02-4c-tabA-insufficient-stock.png`, `screenshots/02-4c-webcam-stock-after.png` |
-| Decision | **Pass** – the server rejects the stale cart (status code expected 409 `INSUFFICIENT_STOCK` per `orders.js`; not captured in the screenshot) |
+| Decision | **Pass** – backend log shows `POST /api/orders 201` (Maria, #10) followed by `POST /api/orders 409` (Tab A). Evidence: `screenshots/02-5-backend-log.png` |
 
 Note: Tab A's cart allowed quantity 4 because the cart copies `stock` when an item is added and does not refresh it (baseline observation 11). This is a UX limitation only; the server is the real guard.
+
+
+
+---
+
+## Case 5 – Product assistant
+
+Backend log for this case: `screenshots/02-5-backend-log.png`. During testing the Gemini provider returned **HTTP 503** for one question and **timed out (8 s)** for another, so the server used its catalog-based fallback. The key is configured (no `NO_KEY` reason was logged); the failures came from the provider. A live Gemini answer was therefore not observed in this session.
+
+### 5a. Supported catalog question
+| Field | Record |
+|---|---|
+| Starting state | Assistant page; Compact Mechanical Keyboard (product 2) ₱1,850, stock 7 |
+| Action and test data | Ask `Which keyboard is below ₱2,000?` |
+| Expected result | Recommends Compact Mechanical Keyboard at ₱1,850 with a source link to product #2; no invented products or prices; if the AI is unavailable, a clear note is shown |
+| Observed result and evidence | `POST /api/assistant/questions` → **200 OK** (≈4.2 s). Answer: "Based on the current ShopSmart catalog, consider: Compact Mechanical Keyboard (₱1,850). (AI assistant unavailable — showing catalog-based results.)" Recommendation "Compact Mechanical Keyboard — ₱1,850"; Sources: "Compact Mechanical Keyboard (product #2)". Backend log: `[assistant] fallback reason=PROVIDER_ERROR status=503`. Clicking the source opened `/products/2` showing the same product at ₱1,850.00. Evidence: `screenshots/02-5a-assistant-keyboard.png`, `screenshots/02-5a-source-link.png` |
+| Decision | **Pass** – correct product, price and source (fallback mode) |
+
+### 5b. Unsupported question (no match)
+| Field | Record |
+|---|---|
+| Starting state | Assistant page; the catalog has no printers |
+| Action and test data | Ask `Do you sell printers?` |
+| Expected result | Honest no-match answer; no products or sources; the AI provider is not called |
+| Observed result and evidence | Answer: "I could not find an in-stock ShopSmart product matching that request." No recommendations and no Sources list. Backend log: `POST /api/assistant/questions 200 3.833 ms` with no fallback line (provider not called). Evidence: `screenshots/02-5b-assistant-no-match.png` |
+| Decision | **Pass** |
+
+### 5c. Out-of-stock product is never recommended
+| Field | Record |
+|---|---|
+| Starting state | USB-C Study Lamp (product 3) has stock 0 |
+| Action and test data | Ask `I need a study lamp` |
+| Expected result | The out-of-stock lamp is not recommended; the answer is honest about availability |
+| Observed result and evidence | Answer: "Based on the current ShopSmart catalog, consider: Laptop Stand (₱1,200). (AI assistant unavailable — showing catalog-based results.)" Sources: "Laptop Stand (product #5)". The Study Lamp does not appear. Backend log: `[assistant] fallback reason=TIMEOUT`, request finished in ≈8.0 s. Evidence: `screenshots/02-5c-assistant-out-of-stock.png` |
+| Decision | **Pass** for grounding and stock (no out-of-stock product recommended). Minor defect **D4**: the fallback suggests the Laptop Stand only because the word "study" matches its category, and does not say the lamp is unavailable. |
 
 ## Additional observations
 - On page load, DevTools shows two `GET /api/products` requests (both 200). This is expected in development because the app uses React StrictMode, which runs effects twice; production builds call it once.
@@ -205,3 +240,16 @@ Note: Tab A's cart allowed quantity 4 because the cart copies `stock` when an it
 | Impact | Usability only; invalid input is still correctly refused by the server |
 | Suspected cause | `frontend/src/services/api.js` keeps only `error.message`; `CheckoutPage.jsx` displays that message and ignores `error.details` |
 | Evidence | `screenshots/02-3a-response-details.png`, `screenshots/02-3b-response-details.png` |
+
+
+
+### D4 – Fallback assistant recommends a product matched only by category word (Severity: Low, Status: Open)
+| Field | Record |
+|---|---|
+| Starting state | USB-C Study Lamp stock 0; Laptop Stand (category "Study") in stock; AI provider unavailable |
+| Action | Ask `I need a study lamp` |
+| Actual result | The rule-based fallback recommends "Laptop Stand (₱1,200)" because the keyword "study" matches its category; it does not mention that the lamp is out of stock |
+| Expected result | An honest answer that no in-stock lamp is available (optionally suggesting related items clearly as alternatives) |
+| Impact | Low: the answer is grounded (real product, correct price, source shown) and the out-of-stock lamp is never recommended, but the suggestion may mislead the customer |
+| Suspected cause | `backend/src/services/assistant.js` `rankProducts`: one matching keyword (including category words) is enough; only the AI path can judge that no product fits |
+| Evidence | `screenshots/02-5c-assistant-out-of-stock.png` |
