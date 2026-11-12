@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>ShopSmart PDC50 Final Documentation – Revano</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm 16mm 14mm; }
+  body { font-family: "Segoe UI", Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1e293b; }
+  h1 { font-size: 20pt; color: #0f172a; border-bottom: 2px solid #0f766e; padding-bottom: 4px; margin: 0 0 12px; break-before: page; }
+  h2 { font-size: 14pt; color: #0f172a; margin: 18px 0 8px; break-after: avoid; }
+  h3 { font-size: 12pt; color: #0f766e; margin: 14px 0 6px; break-after: avoid; }
+  h4, h5 { font-size: 11pt; margin: 12px 0 6px; break-after: avoid; }
+  p { margin: 6px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 10px; font-size: 9pt; }
+  th, td { border: 1px solid #cbd5e1; padding: 4px 6px; vertical-align: top; text-align: left; overflow-wrap: anywhere; }
+  th { background: #f1f5f9; }
+  tr { break-inside: avoid; }
+  code { font-family: Consolas, monospace; font-size: 8.8pt; background: #f1f5f9; padding: 0 2px; border-radius: 3px; overflow-wrap: anywhere; }
+  pre { font-family: Consolas, monospace; font-size: 8pt; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  figure { margin: 8px 0 14px; break-inside: avoid; text-align: center; }
+  figure img { max-width: 100%; max-height: 120mm; border: 1px solid #cbd5e1; }
+  figcaption { font-size: 9pt; color: #475569; margin-top: 4px; }
+  figcaption .file { color: #94a3b8; }
+  .ref { color: #0f766e; }
+  .title { break-after: page; text-align: center; padding-top: 60mm; }
+  .title h1 { break-before: auto; border: 0; font-size: 26pt; }
+  .title .sub { font-size: 14pt; color: #0f766e; margin-bottom: 30mm; }
+  .title table { width: 80%; margin: 0 auto; font-size: 11pt; }
+  .title th { width: 22%; white-space: nowrap; }
+  .toc { break-after: page; }
+  .toc h1 { break-before: auto; }
+  .toc ol { font-size: 12pt; line-height: 2; }
+  .toc a { color: #0f172a; text-decoration: none; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; background: #fef3c7; color: #92400e; font-weight: 700; }
+</style></head><body>
+
+<section class="title">
+  <h1>ShopSmart Quality and Deployment</h1>
+  <div class="sub">PDC50 Guided Challenge – Final Documentation</div>
+  <table>
+    <tr><th>Project</th><td>ShopSmart (React + Vite, Express, PostgreSQL with Prisma, Google Gemini)</td></tr>
+    <tr><th>Course</th><td>PDC50</td></tr>
+    <tr><th>Student</th><td>Stephanie Joy Revano (solo)</td></tr>
+    <tr><th>Branch</th><td><code>ASC_DEPLOYMENT_SHOPSMART_REVANO</code></td></tr>
+    <tr><th>Commit</th><td><code>f590296</code> (release candidate tested)</td></tr>
+    <tr><th>Date</th><td>12 November 2026</td></tr>
+    <tr><th>Status</th><td><span class="badge">Local release candidate</span></td></tr>
+  </table>
+</section>
+
+<section class="toc"><h1>Contents</h1><ol><li><a href="#summary">Summary</a></li><li><a href="#a1">Activity 1 – Baseline and feature inventory</a></li><li><a href="#a2">Activity 2 – Test record</a></li><li><a href="#defects">Defect log (D1–D5)</a></li><li><a href="#a3">Activity 3 – Fix and verify</a></li><li><a href="#a4">Activity 4 – Deployment plan</a></li><li><a href="#a5">Activity 5 – Local release candidate checks</a></li><li><a href="#release">Release note</a></li><li><a href="#appendix">Appendix – How to run the project locally</a></li></ol>
+<p>All customer data in this document is fictional. Secret values (database password, API key) are never shown; where they would appear they are masked as <code>****</code>.</p></section>
+
+<h1 id="summary">Summary</h1>
+<p><strong>What I tested.</strong> I checked the starting state (Activity 1), then ran six customer-journey cases in the browser and with curl (Activity 2): browse and search, cart, checkout, stock rule, the product assistant, and failure handling with the API, the database and the AI provider down. I used fictional customers only, and I never reseeded the database, so the earlier orders (#1 to #10) are still there.</p>
+<p><strong>What I fixed.</strong> I found five defects. I fixed three of them in Activity 3:</p>
+<ul>
+<li><strong>D5:</strong> the health check said "ok" while the database was down. It now runs a small database query and returns 503 when the database cannot be reached. I tested this live by stopping and starting PostgreSQL.</li>
+<li><strong>D1:</strong> typing "10" in the cart quantity box saved "1" first. The box now keeps a draft and applies it on blur or Enter. I tested this in a real browser.</li>
+<li><strong>D2:</strong> one cart error message used the info style. All cart validation messages now use the red error style.</li>
+</ul>
+<p>I added 3 backend tests and 4 frontend tests. The final <code>npm run check</code> passed: lint clean, frontend 15/15, backend 61/61, build OK.</p>
+<p><strong>What is still open.</strong> D3 (checkout errors do not name the field) and D4 (the fallback assistant can suggest a product matched only by a category word) are low impact and open. There is no login, the cart is not saved on refresh, the AI provider was unstable during testing, and <code>npm audit</code> reports 17 dependency issues. Hosting was not approved yet, so this is a local release candidate with a written deployment plan.</p>
+
+<h1 id="a1">Activity 1 – Baseline and feature inventory</h1>
+<p><strong>Date:</strong> 2026-11-11 <strong>Tester / recorder:</strong> Stephanie Joy Revano (solo project) <strong>Branch:</strong> ASC_DEPLOYMENT_SHOPSMART_REVANO (created from ASC_AI_ASSISTANT_SHOPSMART_REVANO at commit 229f4b0) <strong>Commit:</strong> 229f4b0 <strong>Local URLs:</strong> Frontend http://localhost:5173 | API http://localhost:3000 <strong>Environment:</strong> Windows, Node v22.20.0, npm 10.9.3, Prisma 6.19.3, PostgreSQL on localhost:5432 <strong>Supporting evidence:</strong> <code>release-evidence/baseline-report.md</code> (full technical baseline)</p>
+<h3>Baseline check</h3>
+<table><thead><tr><th>Step</th><th>Result</th></tr></thead><tbody><tr><td>PostgreSQL / migrations</td><td><code>npx prisma migrate status</code> (run from <code>backend/</code>): "Database schema is up to date!" – 1 migration found, database <code>shopsmart</code> at <code>localhost:5432</code></td></tr><tr><td><code>npm run check</code></td><td>PASS (exit code 0)</td></tr><tr><td>Lint (frontend, backend)</td><td>Clean, no errors or warnings</td></tr><tr><td>Frontend tests</td><td>11/11 passed</td></tr><tr><td>Backend tests</td><td>58/58 passed</td></tr><tr><td>Frontend build (Vite)</td><td>OK</td></tr><tr><td>Home page (<code>npm run dev</code>)</td><td>Loaded, 6 product cards displayed – see <code>screenshots/01-home.png</code></td></tr><tr><td><code>GET /api/health</code></td><td><code>200 OK</code>, <code>{"status":"ok"}</code> – see <code>screenshots/01-health.png</code></td></tr></tbody></table>
+<figure><img src="../release-evidence/screenshots/01-home.png" alt="Home page at baseline with 6 products."><figcaption>Home page at baseline with 6 products. <span class="file">(01-home.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/01-health.png" alt="GET /api/health at baseline: 200 {"status":"ok"}."><figcaption>GET /api/health at baseline: 200 {"status":"ok"}. <span class="file">(01-health.png)</span></figcaption></figure>
+<p>Note: the handout calls the Express workspace "server"; in this project it is <code>backend/</code>.</p>
+<h3>API verification</h3>
+<p><code>curl.exe -i http://localhost:3000/api/health</code> → <code>HTTP/1.1 200 OK</code>, body <code>{"status":"ok"}</code></p>
+<p>Response headers confirm CORS allows only the frontend origin (<code>Access-Control-Allow-Origin: http://localhost:5173</code>) and Helmet security headers are active (CSP, HSTS, X-Frame-Options, nosniff).</p>
+<h3>Catalog snapshot at baseline (<code>GET /api/products</code>, 2026-11-11 13:00)</h3>
+<table><thead><tr><th>ID</th><th>Product</th><th>Price (₱)</th><th>Stock</th></tr></thead><tbody><tr><td>1</td><td>Wireless Mouse</td><td>650</td><td>4</td></tr><tr><td>2</td><td>Compact Mechanical Keyboard</td><td>1,850</td><td>7</td></tr><tr><td>3</td><td>USB-C Study Lamp</td><td>900</td><td><strong>0</strong></td></tr><tr><td>4</td><td>1080p Webcam</td><td>1,450</td><td>4</td></tr><tr><td>5</td><td>Laptop Stand</td><td>1,200</td><td>7</td></tr><tr><td>6</td><td>USB Headset</td><td>1,350</td><td>6</td></tr></tbody></table>
+<p>Stock levels are lower than the seed values, which shows that orders from earlier labs exist and the database has not been reseeded. This data must be preserved; <code>npm run db:seed</code> will not be run. Product 3 (stock 0) will be used for the stock test in Activity 2. The home page matches the API: USB-C Study Lamp shows "Out of stock" and its "Add to cart" button is disabled.</p>
+<h3>Feature inventory</h3>
+<table><thead><tr><th>Feature</th><th>Status</th><th>Notes</th></tr></thead><tbody><tr><td>Product browsing</td><td>Present</td><td>Product list and product details pages</td></tr><tr><td>Search</td><td>Present</td><td>Server-side search on name or description</td></tr><tr><td>Cart</td><td>Present</td><td>Kept in React state only; the cart is lost on page refresh (design limitation)</td></tr><tr><td>Simulated checkout</td><td>Present</td><td><code>POST /api/orders</code>, no real payment</td></tr><tr><td>Stock rule</td><td>Present (server side)</td><td>Enforced in <code>orders.js</code> with a transaction; no automated test for the server rule</td></tr><tr><td>Product assistant</td><td>Present</td><td>Grounded on in-stock catalog products, with sources</td></tr><tr><td>Live AI</td><td><strong>Present</strong> (Google Gemini)</td><td>Key stored server-side in <code>backend/.env</code>; rule-based fallback on failure</td></tr><tr><td>Health endpoint</td><td>Present</td><td>Does not check the database connection</td></tr><tr><td>Authentication</td><td><strong>Absent</strong></td><td>All routes are public</td></tr><tr><td>Roles</td><td><strong>Absent</strong></td><td>No admin functions</td></tr></tbody></table>
+<p>Because authentication is absent, the sign-in/role test cases in Activity 2 are not applicable. This will be recorded as a known limitation in the release note.</p>
+<h3>Observations and risks at baseline (not yet fixed)</h3>
+<ol><li><code>npm run db:seed</code> deletes all orders and products (<code>seed.js:15-17</code>). It must not be run against data we need to keep.</li><li><code>npm audit</code> reports 17 vulnerabilities (5 critical, 8 high, 4 moderate), present before this challenge.</li><li><code>POST /api/orders</code> has no login and no rate limit.</li><li>A checkout that times out in the browser may still create an order on the server; a retry could create a duplicate.</li><li>The health check does not test the database.</li><li>CORS falls back to <code>http://localhost:5173</code> when <code>FRONTEND_URL</code> is not set.</li><li>The rate limiter does not set "trust proxy", which may cause problems behind a hosting proxy.</li><li>Prisma CLI commands must be run from <code>backend/</code> (where <code>.env</code> is located). Running from the root gives error P1012 "Environment variable not found: DATABASE_URL".</li><li>Prisma CLI warns that <code>package.json#prisma</code> config is deprecated in Prisma 7. No impact on Prisma 6.19.3; the upgrade is out of scope and deferred.</li><li>A malformed JSON request body returns HTTP 400 with code <code>INTERNAL_ERROR</code> and the raw parser message (<code>app.js</code> error handler).</li><li>The cart copies <code>stock</code> when an item is added and never refreshes it; the server correctly rejects over-stock orders with 409 at checkout.</li><li>README "Common problems" advises running <code>npm run db:seed</code> when products do not appear, which would erase all orders.</li></ol>
+
+<p>The full technical baseline (folder tree, every route, every test, suspected issues) is in <code>release-evidence/baseline-report.md</code>.</p>
+
+<h1 id="a2">Activity 2 – Test record</h1>
+<p><strong>Tester / recorder:</strong> Stephanie Joy Revano (solo project) <strong>Date:</strong> 2026-11-11 <strong>Branch / commit:</strong> ASC_DEPLOYMENT_SHOPSMART_REVANO / 7824028 <strong>Environment:</strong> Local – Frontend http://localhost:5173, API http://localhost:3000, PostgreSQL localhost:5432 <strong>Browser:</strong> Google Chrome, DevTools Network tab (Fetch/XHR filter, No throttling, Disable cache) <strong>Test data:</strong> fictional customer details only</p>
+<p>Authentication and roles are absent in this version, so guest/owner/other-customer test cases are not applicable.</p>
+<h2>Case 1 – Browse and search</h2>
+<h3>1a. Search with results</h3>
+<table><thead><tr><th>Field</th><th>Record</th></tr></thead><tbody><tr><td>Starting state</td><td>Home page loaded, 6 products, search box empty, Category "All"</td></tr><tr><td>Action and test data</td><td>Type <code>keyboard</code> in "Search products"</td></tr><tr><td>Expected result</td><td>Only "Compact Mechanical Keyboard" (₱1,850.00) is shown; request <code>GET /api/products?search=keyboard</code> returns 200</td></tr><tr><td>Observed result and evidence</td><td>One product card shown: "Compact Mechanical Keyboard" (Accessories). Request <code>GET /api/products?search=keyboard</code> → 200 OK, 287 bytes, 31 ms; <code>Access-Control-Allow-Origin: http://localhost:5173</code>. Evidence: <code>screenshots/02-1a-search-keyboard.png</code>, <code>screenshots/02-1a-search-keyboard-status.png</code></td></tr><tr><td>Decision</td><td>Pass</td></tr></tbody></table>
+<figure><img src="../release-evidence/screenshots/02-1a-search-keyboard.png" alt="Case 1a: searching "keyboard" shows only the keyboard."><figcaption>Case 1a: searching "keyboard" shows only the keyboard. <span class="file">(02-1a-search-keyboard.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/02-1a-search-keyboard-status.png" alt="Case 1a: Network tab, GET /api/products?search=keyboard returned 200."><figcaption>Case 1a: Network tab, GET /api/products?search=keyboard returned 200. <span class="file">(02-1a-search-keyboard-status.png)</span></figcaption></figure>
+<h3>1b. Search with no results</h3>
+<table><thead><tr><th>Field</th><th>Record</th></tr></thead><tbody><tr><td>Starting state</td><td>Home page, search box cleared</td></tr><tr><td>Action and test data</td><td>Type <code>printer</code> in "Search products"</td></tr><tr><td>Expected result</td><td>No product cards; message "No products match your filters." is shown; request returns 200 with an empty list</td></tr><tr><td>Observed result and evidence</td><td>No product cards; message "No products match your filters." shown. Request <code>GET /api/products?search=printer</code> → 200 OK, Content-Length 15 (<code>{"products":[]}</code>). Loading ended normally. Evidence: <code>screenshots/02-1b-search-no-results.png</code></td></tr><tr><td>Decision</td><td>Pass</td></tr></tbody></table>
+<figure><img src="../release-evidence/screenshots/02-1b-search-no-results.png" alt="Case 1b: searching "printer" shows "No products match your filters.""><figcaption>Case 1b: searching "printer" shows "No products match your filters." <span class="file">(02-1b-search-no-results.png)</span></figcaption></figure>
+<h3>1c. Category filter combined with search</h3>
+<table><thead><tr><th>Field</th><th>Record</th></tr></thead><tbody><tr><td>Starting state</td><td>Home page, search box cleared</td></tr><tr><td>Action and test data</td><td>Select Category <code>Study</code>, then type <code>webcam</code></td></tr><tr><td>Expected result</td><td>No products (webcam is in "Video"); "No products match your filters." is shown; the Category list still contains all categories</td></tr><tr><td>Observed result and evidence</td><td>No product cards; message "No products match your filters." shown. Request <code>GET /api/products?search=webcam</code> → 200 OK, Content-Length 269 (the API returns the webcam; the client-side "Study" filter correctly hides it). Category list still shows All, Accessories, Study, Video, Audio. Evidence: <code>screenshots/02-1c-category-search.png</code>. The category list was checked by opening the dropdown; there is no separate screenshot of the open list.</td></tr><tr><td>Decision</td><td>Pass</td></tr></tbody></table>
+<figure><img src="../release-evidence/screenshots/02-1c-category-search.png" alt="Case 1c: category Study plus search "webcam" shows no products."><figcaption>Case 1c: category Study plus search "webcam" shows no products. <span class="file">(02-1c-category-search.png)</span></figcaption></figure>
+<h2>Case 2 – Cart</h2>
+<table><thead><tr><th>Field</th><th>Record</th></tr></thead><tbody><tr><td>Starting state</td><td>Cart (0); Wireless Mouse ₱650 (stock 4), Laptop Stand ₱1,200 (stock 7)</td></tr><tr><td>Action and test data</td><td>Steps 2.1–2.8 in the table below, run in one session without reloading until step 2.8</td></tr><tr><td>Expected result</td><td>Totals and item counts match the expected values at every step; invalid quantities are refused without changing the cart</td></tr><tr><td>Observed result and evidence</td><td>See the step table below</td></tr><tr><td>Decision</td><td><strong>Fail</strong> – step 2.5 changed the cart quantity unexpectedly (Defect D1); step 2.6 shows a minor style issue (Defect D2). All totals were arithmetically correct for the quantities shown.</td></tr></tbody></table>
+<table><thead><tr><th>Step</th><th>Action</th><th>Expected items / total</th><th>Observed items / total</th><th>Notes</th></tr></thead><tbody><tr><td>2.1</td><td>Add Wireless Mouse</td><td>1 / ₱650</td><td>1 / ₱650 – header Cart (1)</td><td>Message "Wireless Mouse was added to your cart." – Pass. <code>screenshots/02-2-cart-step1.png</code></td></tr><tr><td>2.2</td><td>Add Laptop Stand</td><td>2 / ₱1,850</td><td>2 / ₱1,850 – header Cart (2)</td><td>Message "Laptop Stand was added to your cart." – Pass. <code>screenshots/02-2-cart-step2.png</code></td></tr><tr><td>2.3</td><td>Open Cart, click <strong>+</strong> on Wireless Mouse</td><td>3 / ₱2,500</td><td>3 / ₱2,500</td><td>Mouse 2 × ₱650 = ₱1,300; Laptop Stand ₱1,200; <strong>−</strong> disabled on Laptop Stand at quantity 1 – Pass. <code>screenshots/02-2-cart-step3.png</code></td></tr><tr><td>2.4</td><td>Click <strong>+</strong> until the Mouse quantity is 4</td><td>5 / ₱3,800</td><td>5 / ₱3,800</td><td>Mouse 4 × ₱650 = ₱2,600; <strong>+</strong> disabled at stock limit 4 – Pass. <code>screenshots/02-2-cart-step4.png</code></td></tr><tr><td>2.5</td><td>Select the Mouse quantity (<code>Ctrl + A</code>) and type <code>10</code></td><td>5 / ₱3,800 (unchanged)</td><td><strong>2 / ₱1,850</strong> – Mouse quantity became <strong>1</strong></td><td>Error message "Only 4 unit(s) are available." shown in red, but the first keystroke <code>1</code> was saved as the quantity before <code>0</code> was refused – <strong>Fail (D1)</strong>. <code>screenshots/02-2-cart-step5.png</code></td></tr><tr><td>2.6</td><td>Mouse restored to 4 with <strong>+</strong>; select the quantity and type <code>0</code></td><td>5 / ₱3,800 (unchanged)</td><td>5 / ₱3,800 – quantity stayed 4</td><td>Message "Quantity must be a whole number greater than zero." shown in the <strong>info (teal) style</strong>, not the red error style – Pass with minor defect <strong>D2</strong>. <code>screenshots/02-2-cart-step6.png</code></td></tr><tr><td>2.7</td><td>Click <strong>Remove</strong> on Laptop Stand</td><td>4 / ₱2,600</td><td>4 / ₱2,600 – header Cart (4)</td><td>Message "Item removed from cart." – Pass. <code>screenshots/02-2-cart-step7.png</code></td></tr><tr><td>2.8</td><td>Press <strong>F5</strong> (refresh)</td><td>Team design: cart kept in React state only, so it empties</td><td>0 / – header Cart (0), "Your cart is empty"</td><td>Matches the current design – Pass (known limitation: cart is not persisted). <code>screenshots/02-2-cart-step8-refresh.png</code></td></tr></tbody></table>
+<figure><img src="../release-evidence/screenshots/02-2-cart-step1.png" alt="Case 2, step 2.1: Wireless Mouse added (1 item, ₱650)."><figcaption>Case 2, step 2.1: Wireless Mouse added (1 item, ₱650). <span class="file">(02-2-cart-step1.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/02-2-cart-step2.png" alt="Case 2, step 2.2: Laptop Stand added (2 items, ₱1,850)."><figcaption>Case 2, step 2.2: Laptop Stand added (2 items, ₱1,850). <span class="file">(02-2-cart-step2.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/02-2-cart-step3.png" alt="Case 2, step 2.3: + on the Mouse (3 items, ₱2,500)."><figcaption>Case 2, step 2.3: + on the Mouse (3 items, ₱2,500). <span class="file">(02-2-cart-step3.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/02-2-cart-step4.png" alt="Case 2, step 2.4: Mouse at the stock limit of 4 (5 items, ₱3,800)."><figcaption>Case 2, step 2.4: Mouse at the stock limit of 4 (5 items, ₱3,800). <span class="file">(02-2-cart-step4.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/02-2-cart-step5.png" alt="Case 2, step 2.5: typing 10 left the Mouse at 1 (defect D1, before the fix)."><figcaption>Case 2, step 2.5: typing 10 left the Mouse at 1 (defect D1, before the fix). <span class="file">(02-2-cart-step5.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/02-2-cart-step6.png" alt="Case 2, step 2.6: zero-quantity message in the info style (defect D2, before the fix)."><figcaption>Case 2, step 2.6: zero-quantity message in the info style (defect D2, before the fix). <span class="file">(02-2-cart-step6.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/02-2-cart-step7.png" alt="Case 2, step 2.7: Laptop Stand removed (4 items, ₱2,600)."><figcaption>Case 2, step 2.7: Laptop Stand removed (4 items, ₱2,600). <span class="file">(02-2-cart-step7.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/02-2-cart-step8-refresh.png" alt="Case 2, step 2.8: after a refresh the cart is empty (known limitation)."><figcaption>Case 2, step 2.8: after a refresh the cart is empty (known limitation). <span class="file">(02-2-cart-step8-refresh.png)</span></figcaption></figure>
+<h2>Case 3 – Simulated checkout</h2>
+<p>Stock of Wireless Mouse before Case 3: <code>GET /api/products/1</code> → <code>"stock":4</code>, <code>updatedAt</code> 2026-11-05. Evidence: <code>screenshots/02-3-stock-before.png</code></p>
+<figure><img src="../release-evidence/screenshots/02-3-stock-before.png" alt="Case 3: Wireless Mouse stock 4 before checkout."><figcaption>Case 3: Wireless Mouse stock 4 before checkout. <span class="file">(02-3-stock-before.png)</span></figcaption></figure>
+<h3>3a. Invalid email is refused</h3>
+<table><thead><tr><th>Field</th><th>Record</th></tr></thead><tbody><tr><td>Starting state</td><td>Cart (1): Wireless Mouse × 1; checkout form open</td></tr><tr><td>Action and test data</td><td>Name <code>Juan Dela Cruz</code>, email <code>juan@test</code>, address <code>123 Mabini Street, Sample City</code>; click "Place simulated order"</td></tr><tr><td>Expected result</td><td>The browser allows the value (HTML email check), but the server refuses it with 422; an error is shown; no order is created; the cart is unchanged</td></tr><tr><td>Observed result and evidence</td><td><code>POST /api/orders</code> → <strong>422 Unprocessable Entity</strong>. Page shows "Check the customer and cart information." in the error style; button returned to "Place simulated order"; form values kept. Response <code>details.fieldErrors</code>: <code>{email: ["Invalid email address"]}</code>. Evidence: <code>screenshots/02-3a-checkout-invalid-email.png</code>, <code>screenshots/02-3a-status.png</code>, <code>screenshots/02-3a-response-details.png</code></td></tr><tr><td>Decision</td><td><strong>Pass</strong> (input refused). Minor defect <strong>D3</strong>: the page does not say which field is wrong.</td></tr></tbody></table>
+<figure><img src="../release-evidence/screenshots/02-3a-checkout-invalid-email.png" alt="Case 3a: the invalid email is refused."><figcaption>Case 3a: the invalid email is refused. <span class="file">(02-3a-checkout-invalid-email.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/02-3a-status.png" alt="Case 3a: Network tab shows POST /api/orders 422."><figcaption>Case 3a: Network tab shows POST /api/orders 422. <span class="file">(02-3a-status.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/02-3a-response-details.png" alt="Case 3a: the response shows fieldErrors.email."><figcaption>Case 3a: the response shows fieldErrors.email. <span class="file">(02-3a-response-details.png)</span></figcaption></figure>
+<h3>3b. Address containing only spaces is refused</h3>
+<table><thead><tr><th>Field</th><th>Record</th></tr></thead><tbody><tr><td>Starting state</td><td>Same cart; form open after 3a</td></tr><tr><td>Action and test data</td><td>Email changed to <code>juan.delacruz@example.com</code>; address set to 12 spaces; click "Place simulated order"</td></tr><tr><td>Expected result</td><td>The browser allows 12 spaces (<code>required</code> and <code>minLength="10"</code> pass), but the server trims the value and refuses it with 422; no order is created</td></tr><tr><td>Observed result and evidence</td><td><code>POST /api/orders</code> → <strong>422</strong>. Same message "Check the customer and cart information." Response <code>details.fieldErrors</code>: <code>{address: ["Too small: expected string to have &gt;=10 characters"]}</code>. Evidence: <code>screenshots/02-3b-checkout-blank-address.png</code>, <code>screenshots/02-3b-response-details.png</code></td></tr><tr><td>Decision</td><td><strong>Pass</strong> (server-side validation catches what the browser allows). Same minor defect <strong>D3</strong>.</td></tr></tbody></table>
+<figure><img src="../release-evidence/screenshots/02-3b-checkout-blank-address.png" alt="Case 3b: an address of only spaces is refused."><figcaption>Case 3b: an address of only spaces is refused. <span class="file">(02-3b-checkout-blank-address.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/02-3b-response-details.png" alt="Case 3b: the response shows fieldErrors.address."><figcaption>Case 3b: the response shows fieldErrors.address. <span class="file">(02-3b-response-details.png)</span></figcaption></figure>
+<h3>3c. Valid fictional details create one order</h3>
+<table><thead><tr><th>Field</th><th>Record</th></tr></thead><tbody><tr><td>Starting state</td><td>Same cart (Wireless Mouse × 1); stock 4</td></tr><tr><td>Action and test data</td><td>Name <code>Juan Dela Cruz</code>, email <code>juan.delacruz@example.com</code>, address <code>123 Mabini Street, Barangay Uno, Sample City</code>; click "Place simulated order" <strong>once</strong></td></tr><tr><td>Expected result</td><td>201; one order created with the server's price; confirmation with order number and total ₱650.00; cart cleared; Mouse stock reduced from 4 to 3</td></tr><tr><td>Observed result and evidence</td><td><code>POST /api/orders</code> → <strong>201</strong>, 186 ms (only one 201 request in the log). Page: "Thank you, Juan Dela Cruz!", order <strong>#9</strong>, Total <strong>₱650.00</strong>; header Cart (0). Response: <code>id 9</code>, <code>status "PENDING"</code>, <code>total 650</code>, <code>items [{productId 1, quantity 1, unitPrice 650}]</code>, <code>createdAt 2026-11-12T14:11:04.262Z</code>. After the order, <code>GET /api/products/1</code> → <code>"stock":3</code>, <code>updatedAt 2026-11-12T14:11:04.240Z</code> (same transaction). Evidence: <code>screenshots/02-3c-checkout-success.png</code>, <code>screenshots/02-3c-response-details.png</code>, <code>screenshots/02-3c-stock-after-order.png</code></td></tr><tr><td>Decision</td><td><strong>Pass</strong></td></tr></tbody></table>
+<figure><img src="../release-evidence/screenshots/02-3c-checkout-success.png" alt="Case 3c: order #9 for the fictional customer, total ₱650.00."><figcaption>Case 3c: order #9 for the fictional customer, total ₱650.00. <span class="file">(02-3c-checkout-success.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/02-3c-response-details.png" alt="Case 3c: 201 response with the server price."><figcaption>Case 3c: 201 response with the server price. <span class="file">(02-3c-response-details.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/02-3c-stock-after-order.png" alt="Case 3c: Mouse stock went from 4 to 3."><figcaption>Case 3c: Mouse stock went from 4 to 3. <span class="file">(02-3c-stock-after-order.png)</span></figcaption></figure>
+<h2>Case 4 – Stock rule</h2>
+<h3>4a. Out-of-stock product cannot be added in the browser</h3>
+<table><thead><tr><th>Field</th><th>Record</th></tr></thead><tbody><tr><td>Starting state</td><td>USB-C Study Lamp (product 3) has stock 0</td></tr><tr><td>Action and test data</td><td>View the product card on the home page, then open its Details page</td></tr><tr><td>Expected result</td><td>The product is shown as unavailable and "Add to cart" is disabled on both pages</td></tr><tr><td>Observed result and evidence</td><td>Card shows "Out of stock" in red with a disabled "Add to cart" button. Details page (<code>/products/3</code>) shows "0 unit(s) available" with a disabled "Add to cart" button. Evidence: <code>screenshots/02-4a-lamp-out-of-stock.png</code>, <code>screenshots/02-4a-lamp-details.png</code></td></tr><tr><td>Decision</td><td><strong>Pass</strong></td></tr></tbody></table>
+<figure><img src="../release-evidence/screenshots/02-4a-lamp-out-of-stock.png" alt="Case 4a: Study Lamp card shows "Out of stock" and the button is disabled."><figcaption>Case 4a: Study Lamp card shows "Out of stock" and the button is disabled. <span class="file">(02-4a-lamp-out-of-stock.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/02-4a-lamp-details.png" alt="Case 4a: Study Lamp details page, 0 units, button disabled."><figcaption>Case 4a: Study Lamp details page, 0 units, button disabled. <span class="file">(02-4a-lamp-details.png)</span></figcaption></figure>
+<h3>4b. Direct API order for an out-of-stock product is refused</h3>
+<table><thead><tr><th>Field</th><th>Record</th></tr></thead><tbody><tr><td>Starting state</td><td>Study Lamp stock 0 (<code>updatedAt</code> 2026-10-08)</td></tr><tr><td>Action and test data</td><td>Bypass the browser: <code>curl.exe -i -X POST http://localhost:3000/api/orders</code> with fictional customer details and <code>items: [{productId: 3, quantity: 1}]</code></td></tr><tr><td>Expected result</td><td>409 <code>INSUFFICIENT_STOCK</code>; no order created; stock stays 0</td></tr><tr><td>Observed result and evidence</td><td><strong><code>HTTP/1.1 409 Conflict</code></strong>, body <code>{"error":{"code":"INSUFFICIENT_STOCK","message":"Only 0 unit(s) of USB-C Study Lamp are available."}}</code> (Content-Length 101). Afterwards <code>GET /api/products/3</code> → <code>"stock":0</code>, <code>updatedAt</code> still 2026-10-08 (unchanged). Evidence: <code>screenshots/02-4b-api-insufficient-stock.png</code>, <code>screenshots/02-4b-lamp-stock-unchanged.png</code></td></tr><tr><td>Decision</td><td><strong>Pass</strong> – the stock rule is enforced on the server, not only by the disabled button</td></tr></tbody></table>
+<figure><img src="../release-evidence/screenshots/02-4b-api-insufficient-stock.png" alt="Case 4b: direct API order refused with 409 INSUFFICIENT_STOCK."><figcaption>Case 4b: direct API order refused with 409 INSUFFICIENT_STOCK. <span class="file">(02-4b-api-insufficient-stock.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/02-4b-lamp-stock-unchanged.png" alt="Case 4b: lamp stock is still 0 after the refused order."><figcaption>Case 4b: lamp stock is still 0 after the refused order. <span class="file">(02-4b-lamp-stock-unchanged.png)</span></figcaption></figure>
+<h3>4c. Two customers buy the same product (stale cart)</h3>
+<table><thead><tr><th>Field</th><th>Record</th></tr></thead><tbody><tr><td>Starting state</td><td>1080p Webcam (product 4) stock 4. Two browser tabs, each with its own cart</td></tr><tr><td>Action and test data</td><td><strong>Tab A:</strong> add Webcam, set quantity to 4 (₱5,800), do not check out yet. <strong>Tab B:</strong> add Webcam × 1 and check out as <code>Maria Santos</code>, <code>maria.santos@example.com</code>, <code>45 Rizal Avenue, Barangay Dos, Sample City</code>. <strong>Tab A:</strong> check out the 4 webcams as <code>Juan Dela Cruz</code></td></tr><tr><td>Expected result</td><td>Tab B succeeds and stock becomes 3. Tab A is refused with "Only 3 unit(s) of 1080p Webcam are available."; no order is created for Tab A; Tab A's cart is unchanged; final stock 3</td></tr><tr><td>Observed result and evidence</td><td>Before: <code>"stock":4</code>. Tab A cart: Webcam × 4, total ₱5,800, header Cart (4). Tab B: "Thank you, Maria Santos!", order <strong>#10</strong>, Total <strong>₱1,450.00</strong>, Cart (0). Tab A checkout: error "Only 3 unit(s) of 1080p Webcam are available." shown in the error style; header still Cart (4); order review still Qty 4, ₱5,800; no confirmation shown. After: <code>GET /api/products/4</code> → <code>"stock":3</code>, <code>updatedAt 2026-11-12T14:28:44.497Z</code> (only Maria's order reduced the stock). Evidence: <code>screenshots/02-4c-webcam-stock-before.png</code>, <code>screenshots/02-4c-tabA-cart.png</code>, <code>screenshots/02-4c-tabB-order-success.png</code>, <code>screenshots/02-4c-tabA-insufficient-stock.png</code>, <code>screenshots/02-4c-webcam-stock-after.png</code></td></tr><tr><td>Decision</td><td><strong>Pass</strong> – backend log shows <code>POST /api/orders 201</code> (Maria, #10) followed by <code>POST /api/orders 409</code> (Tab A). Evidence: <code>screenshots/02-5-backend-log.png</code></td></tr></tbody></table>
+<figure><img src="../release-evidence/screenshots/02-4c-webcam-stock-before.png" alt="Case 4c: webcam stock 4 before the two-tab test."><figcaption>Case 4c: webcam stock 4 before the two-tab test. <span class="file">(02-4c-webcam-stock-before.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/02-4c-tabA-cart.png" alt="Case 4c: Tab A cart with 4 webcams."><figcaption>Case 4c: Tab A cart with 4 webcams. <span class="file">(02-4c-tabA-cart.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/02-4c-tabB-order-success.png" alt="Case 4c: Tab B order #10 succeeded."><figcaption>Case 4c: Tab B order #10 succeeded. <span class="file">(02-4c-tabB-order-success.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/02-4c-tabA-insufficient-stock.png" alt="Case 4c: Tab A refused, only 3 left."><figcaption>Case 4c: Tab A refused, only 3 left. <span class="file">(02-4c-tabA-insufficient-stock.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/02-4c-webcam-stock-after.png" alt="Case 4c: webcam stock 3 after the test."><figcaption>Case 4c: webcam stock 3 after the test. <span class="file">(02-4c-webcam-stock-after.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/02-5-backend-log.png" alt="Backend log: order 201 then 409, and the assistant fallback reasons (503 and TIMEOUT)."><figcaption>Backend log: order 201 then 409, and the assistant fallback reasons (503 and TIMEOUT). <span class="file">(02-5-backend-log.png)</span></figcaption></figure>
+<p>Note: Tab A's cart allowed quantity 4 because the cart copies <code>stock</code> when an item is added and does not refresh it (baseline observation 11). This is a UX limitation only; the server is the real guard.</p>
+<h2>Case 5 – Product assistant</h2>
+<p>Backend log for this case: <code>screenshots/02-5-backend-log.png</code>. During testing the Gemini provider returned <strong>HTTP 503</strong> for one question and <strong>timed out (8 s)</strong> for another, so the server used its catalog-based fallback. The key is configured (no <code>NO_KEY</code> reason was logged); the failures came from the provider. A live Gemini answer was therefore not observed in this session.</p>
+<h3>5a. Supported catalog question</h3>
+<table><thead><tr><th>Field</th><th>Record</th></tr></thead><tbody><tr><td>Starting state</td><td>Assistant page; Compact Mechanical Keyboard (product 2) ₱1,850, stock 7</td></tr><tr><td>Action and test data</td><td>Ask <code>Which keyboard is below ₱2,000?</code></td></tr><tr><td>Expected result</td><td>Recommends Compact Mechanical Keyboard at ₱1,850 with a source link to product #2; no invented products or prices; if the AI is unavailable, a clear note is shown</td></tr><tr><td>Observed result and evidence</td><td><code>POST /api/assistant/questions</code> → <strong>200 OK</strong> (≈4.2 s). Answer: "Based on the current ShopSmart catalog, consider: Compact Mechanical Keyboard (₱1,850). (AI assistant unavailable — showing catalog-based results.)" Recommendation "Compact Mechanical Keyboard — ₱1,850"; Sources: "Compact Mechanical Keyboard (product #2)". Backend log: <code>[assistant] fallback reason=PROVIDER_ERROR status=503</code>. Clicking the source opened <code>/products/2</code> showing the same product at ₱1,850.00. Evidence: <code>screenshots/02-5a-assistant-keyboard.png</code>, <code>screenshots/02-5a-source-link.png</code></td></tr><tr><td>Decision</td><td><strong>Pass</strong> – correct product, price and source (fallback mode)</td></tr></tbody></table>
+<figure><img src="../release-evidence/screenshots/02-5a-assistant-keyboard.png" alt="Case 5a: keyboard answer with a source (fallback mode)."><figcaption>Case 5a: keyboard answer with a source (fallback mode). <span class="file">(02-5a-assistant-keyboard.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/02-5a-source-link.png" alt="Case 5a: the source link opens product #2 at ₱1,850.00."><figcaption>Case 5a: the source link opens product #2 at ₱1,850.00. <span class="file">(02-5a-source-link.png)</span></figcaption></figure>
+<h3>5b. Unsupported question (no match)</h3>
+<table><thead><tr><th>Field</th><th>Record</th></tr></thead><tbody><tr><td>Starting state</td><td>Assistant page; the catalog has no printers</td></tr><tr><td>Action and test data</td><td>Ask <code>Do you sell printers?</code></td></tr><tr><td>Expected result</td><td>Honest no-match answer; no products or sources; the AI provider is not called</td></tr><tr><td>Observed result and evidence</td><td>Answer: "I could not find an in-stock ShopSmart product matching that request." No recommendations and no Sources list. Backend log: <code>POST /api/assistant/questions 200 3.833 ms</code> with no fallback line (provider not called). Evidence: <code>screenshots/02-5b-assistant-no-match.png</code></td></tr><tr><td>Decision</td><td><strong>Pass</strong></td></tr></tbody></table>
+<figure><img src="../release-evidence/screenshots/02-5b-assistant-no-match.png" alt="Case 5b: honest no-match answer for printers."><figcaption>Case 5b: honest no-match answer for printers. <span class="file">(02-5b-assistant-no-match.png)</span></figcaption></figure>
+<h3>5c. Out-of-stock product is never recommended</h3>
+<table><thead><tr><th>Field</th><th>Record</th></tr></thead><tbody><tr><td>Starting state</td><td>USB-C Study Lamp (product 3) has stock 0</td></tr><tr><td>Action and test data</td><td>Ask <code>I need a study lamp</code></td></tr><tr><td>Expected result</td><td>The out-of-stock lamp is not recommended; the answer is honest about availability</td></tr><tr><td>Observed result and evidence</td><td>Answer: "Based on the current ShopSmart catalog, consider: Laptop Stand (₱1,200). (AI assistant unavailable — showing catalog-based results.)" Sources: "Laptop Stand (product #5)". The Study Lamp does not appear. Backend log: <code>[assistant] fallback reason=TIMEOUT</code>, request finished in ≈8.0 s. Evidence: <code>screenshots/02-5c-assistant-out-of-stock.png</code></td></tr><tr><td>Decision</td><td><strong>Pass</strong> for grounding and stock (no out-of-stock product recommended). Minor defect <strong>D4</strong>: the fallback suggests the Laptop Stand only because the word "study" matches its category, and does not say the lamp is unavailable.</td></tr></tbody></table>
+<figure><img src="../release-evidence/screenshots/02-5c-assistant-out-of-stock.png" alt="Case 5c: study lamp question. The out-of-stock lamp is not recommended (defect D4)."><figcaption>Case 5c: study lamp question. The out-of-stock lamp is not recommended (defect D4). <span class="file">(02-5c-assistant-out-of-stock.png)</span></figcaption></figure>
+<h2>Additional observations</h2>
+<ul><li>On page load, DevTools shows two <code>GET /api/products</code> requests (both 200). This is expected in development because the app uses React StrictMode, which runs effects twice; production builds call it once.</li><li>The Console shows <code>GET /favicon.ico 404 (Not Found)</code>: the frontend has no favicon. Cosmetic only; no functional impact. Not fixed (low priority).</li></ul>
+<ul><li>The new order received id #9, which shows that earlier orders (#1–#8 from previous labs) are still in the database; no reseed occurred.</li><li>Order prices come from the server: the response shows <code>unitPrice 650</code> and <code>total 650</code> taken from the database, not from the browser.</li></ul>
+<h2>Case 6 – Failure handling</h2>
+<h3>6a. API server stopped (frontend running)</h3>
+<table><thead><tr><th>Field</th><th>Record</th></tr></thead><tbody><tr><td>Starting state</td><td>Frontend running with <code>npm run dev --workspace frontend</code>; backend stopped (<code>Ctrl + C</code>). One tab prepared on the checkout page with Laptop Stand × 1</td></tr><tr><td>Action and test data</td><td>(1) Click "Place simulated order"; (2) reload the Products page; (3) ask the assistant <code>Which keyboard is below ₱2,000?</code></td></tr><tr><td>Expected result</td><td>Each request ends and shows a useful error; no endless loading; the cart and form data are kept; no order is created</td></tr><tr><td>Observed result and evidence</td><td>(1) Checkout: "Could not reach the ShopSmart server." in the error style; header still Cart (1); form values kept; loading ended. No order was created, because the API was down and the request never reached the server. (2) Products: "Could not reach the ShopSmart server. Make sure the backend is running."; no "Loading products…" left on screen. (3) Assistant: "Could not reach the ShopSmart server."; the button returned to "Ask ShopSmart". Evidence: <code>screenshots/02-6a-products-api-down.png</code>, <code>screenshots/02-6a-assistant-api-down.png</code>. The checkout screenshot was removed because the browser had autofilled my real name, email and address into the form. That was real personal data, not fictional test data. No replacement screenshot was taken.</td></tr><tr><td>Decision</td><td><strong>Pass</strong></td></tr></tbody></table>
+<figure><img src="../release-evidence/screenshots/02-6a-products-api-down.png" alt="Case 6a: products page with the API stopped."><figcaption>Case 6a: products page with the API stopped. <span class="file">(02-6a-products-api-down.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/02-6a-assistant-api-down.png" alt="Case 6a: assistant with the API stopped."><figcaption>Case 6a: assistant with the API stopped. <span class="file">(02-6a-assistant-api-down.png)</span></figcaption></figure>
+<h3>6b. Database stopped (API running)</h3>
+<table><thead><tr><th>Field</th><th>Record</th></tr></thead><tbody><tr><td>Starting state</td><td>Backend running; PostgreSQL service stopped in <code>services.msc</code></td></tr><tr><td>Action and test data</td><td>(1) <code>curl.exe -i http://localhost:3000/api/health</code>; (2) reload the Products page; (3) check the backend log; (4) restart PostgreSQL and check the data</td></tr><tr><td>Expected result</td><td>The health check reports that the service is not healthy; product requests fail with a controlled error and no internal details; the browser shows a useful message; after restart, data is unchanged</td></tr><tr><td>Observed result and evidence</td><td>(1) Health: <strong><code>HTTP/1.1 200 OK</code>, <code>{"status":"ok"}</code></strong>, although the database was unreachable – <strong>Fail (D5)</strong>. (2) Browser: "The server could not complete the request. Make sure the backend is running."; loading ended. The message is generic: the backend was running and the database was down. (3) Backend log: <code>GET /api/products 500</code> (≈4 s) with <code>PrismaClientInitializationError … Can't reach database server at localhost:5432</code>; the API response contained only <code>INTERNAL_ERROR</code>, a generic message and a <code>traceId</code> (no internal details, no credentials). (4) After restarting PostgreSQL, <code>GET /api/products/4</code> → <code>"stock":3</code>, <code>updatedAt 2026-11-12T14:28:44.497Z</code> (unchanged). Evidence: <code>screenshots/02-6b-health-db-down.png</code>, <code>screenshots/02-6b-browser-db-down.png</code>, <code>screenshots/02-6b-backend-log-db-down.png</code>, <code>screenshots/02-6b-recovered.png</code></td></tr><tr><td>Decision</td><td><strong>Fail</strong> – the failure is handled safely for users, but the health endpoint reports "ok" while the database is down (<strong>Defect D5</strong>)</td></tr></tbody></table>
+<figure><img src="../release-evidence/screenshots/02-6b-health-db-down.png" alt="Case 6b: health said 200 "ok" with the database down (defect D5, before the fix)."><figcaption>Case 6b: health said 200 "ok" with the database down (defect D5, before the fix). <span class="file">(02-6b-health-db-down.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/02-6b-browser-db-down.png" alt="Case 6b: browser message with the database down."><figcaption>Case 6b: browser message with the database down. <span class="file">(02-6b-browser-db-down.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/02-6b-backend-log-db-down.png" alt="Case 6b: backend log shows "Can't reach database server"."><figcaption>Case 6b: backend log shows "Can't reach database server". <span class="file">(02-6b-backend-log-db-down.png)</span></figcaption></figure>
+<figure><img src="../release-evidence/screenshots/02-6b-recovered.png" alt="Case 6b: after the restart, product 4 stock is still 3."><figcaption>Case 6b: after the restart, product 4 stock is still 3. <span class="file">(02-6b-recovered.png)</span></figcaption></figure>
+<h3>6c. AI provider failure</h3>
+<p>Observed naturally during Case 5: the provider returned HTTP 503 and later timed out after 8 s. Both requests returned 200 with catalog-based results and the note "(AI assistant unavailable — showing catalog-based results.)"; loading ended in ≈4.2 s and ≈8.0 s. Only reason codes were logged (<code>PROVIDER_ERROR status=503</code>, <code>TIMEOUT</code>). Evidence: <code>screenshots/02-5-backend-log.png</code>, <code>screenshots/02-5a-assistant-keyboard.png</code>, <code>screenshots/02-5c-assistant-out-of-stock.png</code>. <strong>Decision: Pass.</strong></p>
+
+
+<h1 id="defects">Defect log (D1–D5)</h1>
+<p>Status after Activity 3 (details in <code>03-fix-and-verify.md</code>):</p>
+<table><thead><tr><th>ID</th><th>Defect</th><th>Severity</th><th>Status</th></tr></thead><tbody><tr><td>D1</td><td>Typing a multi-digit cart quantity saves the first digit</td><td>Medium</td><td><strong>Fixed</strong></td></tr><tr><td>D2</td><td>Zero-quantity message uses the info style</td><td>Low</td><td><strong>Fixed</strong></td></tr><tr><td>D3</td><td>Checkout errors do not say which field is invalid</td><td>Low</td><td>Open</td></tr><tr><td>D4</td><td>Fallback assistant recommends a product matched only by a category word</td><td>Low</td><td>Open</td></tr><tr><td>D5</td><td>Health endpoint reports "ok" while the database is down</td><td>Medium</td><td><strong>Fixed</strong></td></tr></tbody></table>
+<h3>D1 – Typing a multi-digit cart quantity saves the first digit (Severity: Medium, Status: Fixed)</h3>
+<table><thead><tr><th>Field</th><th>Record</th></tr></thead><tbody><tr><td>Starting state</td><td>Cart contains Wireless Mouse × 4 (stock 4) and Laptop Stand × 1; total ₱3,800</td></tr><tr><td>Action</td><td>On the Cart page, select the Mouse quantity box (<code>Ctrl + A</code>) and type <code>10</code></td></tr><tr><td>Actual result</td><td>After <code>1</code>, the quantity is saved as 1; after <code>0</code>, the value 10 is refused with "Only 4 unit(s) are available." The cart is left at Mouse × 1, total ₱1,850</td></tr><tr><td>Expected result</td><td>The value 10 is refused and the quantity stays at 4 (total ₱3,800)</td></tr><tr><td>Impact</td><td>The customer's quantity is changed silently while the message suggests nothing changed; the customer could check out with fewer items than intended</td></tr><tr><td>Suspected cause</td><td><code>frontend/src/pages/CartPage.jsx</code>: the quantity input calls <code>setQuantity(..., Number(event.target.value))</code> on every keystroke, so intermediate values are committed</td></tr><tr><td>Evidence</td><td><code>screenshots/02-2-cart-step5.png</code></td></tr><tr><td>Fix</td><td>The quantity box keeps a draft of what is typed. The cart only changes on blur or Enter. Files: <code>frontend/src/pages/CartPage.jsx</code>, <code>frontend/src/utils/cart.js</code></td></tr><tr><td>Repeat test after fix</td><td>2026-11-12, real browser (Edge): typed <code>10</code> into Mouse × 3 (stock 3). After <code>1</code> and <code>0</code> the total stayed ₱3,150. On Enter, "Only 3 unit(s) are available." in red and the box went back to 3. <strong>Pass.</strong> Evidence: <code>03-d1-browser-check.txt</code></td></tr></tbody></table>
+<h3>D2 – Zero-quantity message uses the info style instead of the error style (Severity: Low, Status: Fixed)</h3>
+<table><thead><tr><th>Field</th><th>Record</th></tr></thead><tbody><tr><td>Starting state</td><td>Cart contains Wireless Mouse × 4 and Laptop Stand × 1</td></tr><tr><td>Action</td><td>Select the Mouse quantity box and type <code>0</code></td></tr><tr><td>Actual result</td><td>The quantity correctly stays at 4, but "Quantity must be a whole number greater than zero." is shown in the teal info style</td></tr><tr><td>Expected result</td><td>The validation message uses the red error style, like "Only 4 unit(s) are available."</td></tr><tr><td>Impact</td><td>Cosmetic/UX only; the invalid value is still refused</td></tr><tr><td>Suspected cause</td><td><code>frontend/src/pages/CartPage.jsx</code>: the error style is chosen only when the message starts with "Only"</td></tr><tr><td>Evidence</td><td><code>screenshots/02-2-cart-step6.png</code></td></tr><tr><td>Fix</td><td>The cart now stores a message type (<code>error</code> or <code>info</code>) next to the message. The page uses that type instead of checking the first word. Files: <code>frontend/src/context/CartContext.jsx</code>, <code>frontend/src/pages/CartPage.jsx</code></td></tr><tr><td>Repeat test after fix</td><td>2026-11-12, real browser (Edge): typed <code>0</code> and left the box. "Quantity must be a whole number greater than zero." in the red error style; quantity stayed 3. <strong>Pass.</strong> Evidence: <code>03-d1-browser-check.txt</code></td></tr></tbody></table>
+<h3>D3 – Checkout errors do not say which field is invalid (Severity: Low, Status: Open)</h3>
+<table><thead><tr><th>Field</th><th>Record</th></tr></thead><tbody><tr><td>Starting state</td><td>Checkout form with Wireless Mouse × 1 in the cart</td></tr><tr><td>Action</td><td>Submit with email <code>juan@test</code> (3a), or with an address of only spaces (3b)</td></tr><tr><td>Actual result</td><td>The page shows only "Check the customer and cart information." The API response already contains the field-level reason (<code>fieldErrors.email</code> / <code>fieldErrors.address</code>), but it is not displayed</td></tr><tr><td>Expected result</td><td>The customer is told which field to correct (for example, "Email: Invalid email address")</td></tr><tr><td>Impact</td><td>Usability only; invalid input is still correctly refused by the server</td></tr><tr><td>Suspected cause</td><td><code>frontend/src/services/api.js</code> keeps only <code>error.message</code>; <code>CheckoutPage.jsx</code> displays that message and ignores <code>error.details</code></td></tr><tr><td>Evidence</td><td><code>screenshots/02-3a-response-details.png</code>, <code>screenshots/02-3b-response-details.png</code></td></tr><tr><td>Why not fixed</td><td>Low impact, and it needs changes in both <code>api.js</code> and <code>CheckoutPage.jsx</code>. Left for a later release.</td></tr><tr><td>Safe temporary limitation</td><td>The server still refuses bad input and no order is created. The form keeps the typed values. The release note tells testers to check the email and the address (at least 10 real characters) if they see this message.</td></tr></tbody></table>
+<h3>D4 – Fallback assistant recommends a product matched only by category word (Severity: Low, Status: Open)</h3>
+<table><thead><tr><th>Field</th><th>Record</th></tr></thead><tbody><tr><td>Starting state</td><td>USB-C Study Lamp stock 0; Laptop Stand (category "Study") in stock; AI provider unavailable</td></tr><tr><td>Action</td><td>Ask <code>I need a study lamp</code></td></tr><tr><td>Actual result</td><td>The rule-based fallback recommends "Laptop Stand (₱1,200)" because the keyword "study" matches its category; it does not mention that the lamp is out of stock</td></tr><tr><td>Expected result</td><td>An honest answer that no in-stock lamp is available (optionally suggesting related items clearly as alternatives)</td></tr><tr><td>Impact</td><td>Low: the answer is grounded (real product, correct price, source shown) and the out-of-stock lamp is never recommended, but the suggestion may mislead the customer</td></tr><tr><td>Suspected cause</td><td><code>backend/src/services/assistant.js</code> <code>rankProducts</code>: one matching keyword (including category words) is enough; only the AI path can judge that no product fits</td></tr><tr><td>Evidence</td><td><code>screenshots/02-5c-assistant-out-of-stock.png</code></td></tr><tr><td>Why not fixed</td><td>It only happens in the rule-based fallback, and changing the ranking rules could break the assistant behavior and tests from the earlier assistant lab. Left for a later release.</td></tr><tr><td>Safe temporary limitation</td><td>The out-of-stock lamp is never recommended, and every suggestion is a real product with its real price and a source link. The fallback note tells the customer that the AI was not used. The release note lists this.</td></tr></tbody></table>
+<h3>D5 – Health endpoint reports "ok" while the database is down (Severity: Medium, Status: Fixed)</h3>
+<table><thead><tr><th>Field</th><th>Record</th></tr></thead><tbody><tr><td>Starting state</td><td>Backend running; PostgreSQL service stopped</td></tr><tr><td>Action</td><td><code>curl.exe -i http://localhost:3000/api/health</code></td></tr><tr><td>Actual result</td><td><code>HTTP/1.1 200 OK</code> with <code>{"status":"ok"}</code>, while <code>GET /api/products</code> fails with 500 (<code>Can't reach database server at localhost:5432</code>)</td></tr><tr><td>Expected result</td><td>The health check reports an unhealthy state (for example 503 with <code>{"status":"error","database":"unreachable"}</code>)</td></tr><tr><td>Impact</td><td>A hosting platform or evaluator relying on <code>/api/health</code> would see a healthy service while customers cannot load products or place orders</td></tr><tr><td>Suspected cause</td><td><code>backend/src/app.js</code>: <code>/api/health</code> returns a static response and never checks the database</td></tr><tr><td>Evidence</td><td><code>screenshots/02-6b-health-db-down.png</code>, <code>screenshots/02-6b-backend-log-db-down.png</code></td></tr><tr><td>Fix</td><td><code>/api/health</code> now runs <code>SELECT 1</code> on the database with a 2 second limit. Database up: 200 <code>{"status":"ok","database":"ok"}</code>. Database down: 503 <code>{"status":"error","database":"unreachable"}</code>, with no error details. File: <code>backend/src/app.js</code>. Tests: <code>backend/test/health.test.js</code></td></tr><tr><td>Repeat test after fix</td><td>2026-11-12: PostgreSQL running → <code>200 OK</code> <code>{"status":"ok","database":"ok"}</code>. PostgreSQL stopped → <code>503 Service Unavailable</code> <code>{"status":"error","database":"unreachable"}</code> in about 2 s. PostgreSQL started again → <code>200 OK</code>, and product 4 still had stock 3. <strong>Pass.</strong> Evidence: <code>03-health-db-up.txt</code>, <code>03-health-db-down.txt</code>, <code>03-health-db-recovered.txt</code></td></tr></tbody></table>
+
+
+<h1 id="a3">Activity 3 – Fix and verify</h1>
+<p><strong>Tester / recorder:</strong> Stephanie Joy Revano (solo project) <strong>Date:</strong> 2026-11-12 <strong>Branch:</strong> ASC_DEPLOYMENT_SHOPSMART_REVANO</p>
+<p>I fixed D5 first because it was required. D1 was small, so I fixed it too. D2 was a one-line cause in the same file, so I fixed it while I was there. D3 and D4 are still open.</p>
+<table><thead><tr><th>ID</th><th>Defect</th><th>Status</th></tr></thead><tbody><tr><td>D5</td><td>Health endpoint says "ok" while the database is down</td><td><strong>Fixed</strong></td></tr><tr><td>D1</td><td>Typing "10" in the cart quantity box saves "1" first</td><td><strong>Fixed</strong></td></tr><tr><td>D2</td><td>Zero-quantity message uses the info style</td><td><strong>Fixed</strong></td></tr><tr><td>D3</td><td>Checkout errors do not say which field is wrong</td><td>Open</td></tr><tr><td>D4</td><td>Fallback assistant suggests a product matched only by a category word</td><td>Open</td></tr></tbody></table>
+<h2>D5 – Health check does not check the database</h2>
+<p><strong>Reproduction (before the fix)</strong></p>
+<table><thead><tr><th>Field</th><th>Record</th></tr></thead><tbody><tr><td>Starting state</td><td>Backend running. PostgreSQL service stopped in <code>services.msc</code>.</td></tr><tr><td>Action</td><td><code>curl.exe -i http://localhost:3000/api/health</code></td></tr><tr><td>Actual</td><td><code>HTTP/1.1 200 OK</code> with <code>{"status":"ok"}</code>. At the same time <code>GET /api/products</code> failed with 500.</td></tr><tr><td>Expected</td><td>The health check says the service is not healthy.</td></tr><tr><td>Evidence</td><td><code>screenshots/02-6b-health-db-down.png</code></td></tr></tbody></table>
+<p><strong>Root cause.</strong> In <code>backend/src/app.js</code>, the health route always sent <code>{"status":"ok"}</code>. It never talked to the database.</p>
+<p><strong>Change.</strong></p>
+<ul><li><code>backend/src/app.js</code>: the health route now runs <code>SELECT 1</code> through Prisma.</li><ul><li>It waits at most 2 seconds, so a stuck database cannot make it hang.</li><li>Database answers: <code>200 {"status":"ok","database":"ok"}</code>.</li><li>Database fails or is too slow: <code>503 {"status":"error","database":"unreachable"}</code>.</li><li>The response has no error details. The log line only says <code>[health] database check failed</code>.</li></ul><li><code>createApp()</code> now takes an optional <code>checkDatabase</code> function. The default uses Prisma. Tests can pass a fake one, so they do not need a real database.</li></ul>
+<p><strong>Tests added</strong> (<code>backend/test/health.test.js</code>, node:test):</p>
+<ol><li>Database answers → 200 with <code>database: "ok"</code>.</li><li>Database check throws "Can't reach database server at localhost:5432" → 503, and the response does not contain <code>localhost</code> or <code>5432</code>.</li><li>Database check never answers → 503 in under 1 second (test timeout set to 50 ms).</li></ol>
+<p><strong>Repeat test after the fix (live, with the real database).</strong></p>
+<table><thead><tr><th>Step</th><th>Result</th><th>Evidence</th></tr></thead><tbody><tr><td>PostgreSQL running</td><td><code>HTTP/1.1 200 OK</code>, <code>{"status":"ok","database":"ok"}</code>, about 6 ms</td><td><code>03-health-db-up.txt</code></td></tr><tr><td>PostgreSQL stopped (I stopped it in <code>services.msc</code>)</td><td><code>HTTP/1.1 503 Service Unavailable</code>, <code>{"status":"error","database":"unreachable"}</code>, about 2 s</td><td><code>03-health-db-down.txt</code></td></tr><tr><td>PostgreSQL started again</td><td><code>HTTP/1.1 200 OK</code>, <code>{"status":"ok","database":"ok"}</code>. Product 4 still had stock 3 with the same <code>updatedAt</code>, so no data was lost.</td><td><code>03-health-db-recovered.txt</code></td></tr></tbody></table>
+<p><strong>Decision: Pass. D5 is fixed.</strong></p>
+<h2>D1 – Typing "10" in the cart quantity box saves "1" first</h2>
+<p><strong>Reproduction (before the fix)</strong></p>
+<table><thead><tr><th>Field</th><th>Record</th></tr></thead><tbody><tr><td>Starting state</td><td>Cart has Wireless Mouse × 4 (stock 4) and Laptop Stand × 1. Total ₱3,800.</td></tr><tr><td>Action</td><td>Select the Mouse quantity box and type <code>10</code>.</td></tr><tr><td>Actual</td><td>After <code>1</code>, the quantity became 1. After <code>0</code>, 10 was refused. The cart was left at Mouse × 1, total ₱1,850.</td></tr><tr><td>Expected</td><td>10 is refused and the quantity stays at 4.</td></tr><tr><td>Evidence</td><td><code>screenshots/02-2-cart-step5.png</code></td></tr></tbody></table>
+<p><strong>Root cause.</strong> In <code>frontend/src/pages/CartPage.jsx</code>, the box called <code>setQuantity</code> on every key press. So "1" was saved before the customer could type "0".</p>
+<p><strong>Change.</strong></p>
+<ul><li><code>frontend/src/pages/CartPage.jsx</code>: a small <code>QuantityInput</code> component keeps what the customer types as a draft. The cart only changes on blur or Enter. Escape puts the old value back. If the value is refused, the box shows the old quantity again. The + and − buttons are not changed.</li><li><code>frontend/src/utils/cart.js</code>: new helper <code>parseQuantityDraft()</code>. It turns the typed text into a number. Blank text becomes <code>NaN</code>, so the existing <code>updateCartQuantity()</code> refuses it like any other bad value.</li></ul>
+<p><strong>Tests added</strong> (<code>frontend/src/utils/cart.test.js</code>, vitest, no new packages):</p>
+<ol><li><code>parseQuantityDraft</code> reads "10" as 10, " 3 " as 3, and blank as NaN.</li><li>"10" with stock 4 is refused with "Only 4 unit(s) are available." The cart is not changed and the total stays 3,800.</li><li>Blank, "0", "1.5" and "abc" are refused and the cart is not changed.</li><li>A valid "2" is applied and the total becomes 2,500.</li></ol>
+<p>These tests cover the logic. The React event wiring (blur and Enter) cannot be unit tested without new packages, so I also tested it in a real browser.</p>
+<p><strong>Repeat test after the fix (real browser).</strong> I drove Microsoft Edge (headless, new empty profile) with a short local script. It pressed the keys one at a time, like a person typing. Only the cart was used, and no order was placed. The full record is in <code>03-d1-browser-check.txt</code>.</p>
+<table><thead><tr><th>Step</th><th>Box</th><th>Items / total</th><th>Message</th></tr></thead><tbody><tr><td>Start: Mouse × 3 (stock 3) + Laptop Stand × 1</td><td>3</td><td>4 / ₱3,150</td><td>none</td></tr><tr><td>Type <code>1</code></td><td>1</td><td>4 / ₱3,150</td><td>none (cart not changed)</td></tr><tr><td>Type <code>0</code></td><td>10</td><td>4 / ₱3,150</td><td>none (cart not changed)</td></tr><tr><td>Press Enter</td><td>3</td><td>4 / ₱3,150</td><td>"Only 3 unit(s) are available." (red)</td></tr><tr><td>Type <code>2</code>, press Enter</td><td>2</td><td>3 / ₱2,500</td><td>none</td></tr><tr><td>Click + then −</td><td>3, then 2</td><td>4 / ₱3,150, then 3 / ₱2,500</td><td>none</td></tr></tbody></table>
+<p>Note: Mouse stock was 3 here, not 4, because order #9 in Activity 2 used one.</p>
+<p><strong>Decision: Pass. D1 is fixed.</strong></p>
+<h2>D2 – Zero-quantity message uses the info style</h2>
+<p><strong>Reproduction (before the fix).</strong> Type <code>0</code> in the Mouse box. The quantity stayed the same, but "Quantity must be a whole number greater than zero." was shown in teal (info), not red. Evidence: <code>screenshots/02-2-cart-step6.png</code>.</p>
+<p><strong>Root cause.</strong> <code>CartPage.jsx</code> chose the red style only when the message started with "Only".</p>
+<p><strong>Change.</strong> <code>frontend/src/context/CartContext.jsx</code> now keeps a <code>cartMessageType</code> (<code>error</code> or <code>info</code>) next to the message. <code>CartPage.jsx</code> uses that type.</p>
+<p><strong>Repeat test after the fix (real browser).</strong> Typed <code>0</code> and pressed Tab. The quantity stayed 3, and the message was shown in the red error style. Evidence: <code>03-d1-browser-check.txt</code>.</p>
+<p><strong>Decision: Pass. D2 is fixed.</strong></p>
+<h2>Check result after the fixes</h2>
+<p><code>npm run check</code> from the repo root: <strong>exit code 0</strong>. Full output: <code>03-check-after-fix.txt</code>.</p>
+<table><thead><tr><th>Step</th><th>Result</th></tr></thead><tbody><tr><td>Lint (frontend and backend)</td><td>Clean</td></tr><tr><td>Frontend tests</td><td>15/15 passed (11 before + 4 new)</td></tr><tr><td>Backend tests</td><td>61/61 passed (58 before + 3 new)</td></tr><tr><td>Frontend build</td><td>OK</td></tr></tbody></table>
+<p>No existing test was removed or changed.</p>
+<h2>Defects still open</h2>
+<table><thead><tr><th>ID</th><th>Impact</th><th>Safe temporary limitation</th></tr></thead><tbody><tr><td>D3 – checkout errors do not name the field</td><td>Low. The customer sees "Check the customer and cart information." but not which field is wrong.</td><td>The server still refuses bad input and no order is made. The form keeps the typed values. The release note tells testers to check the email and the address (at least 10 real characters).</td></tr><tr><td>D4 – fallback assistant suggests a product matched only by a category word</td><td>Low. When the AI is down, "I need a study lamp" suggests the Laptop Stand.</td><td>The out-of-stock lamp is never recommended. Every suggestion is a real product with its real price and a source link. The fallback note says the AI was not used. Listed in the release note.</td></tr></tbody></table>
+<p>Other known risks from the baseline (not defects found in Activity 2, so not fixed here): no login or roles, no rate limit on <code>POST /api/orders</code>, a possible duplicate order if the browser times out during checkout, the seed script wipes data, and the npm audit findings. They are listed in the deployment plan and the release note.</p>
+
+<h2>Evidence files</h2>
+<h3>D5 – health check, database running (03-health-db-up.txt)</h3><pre class="evidence">Activity 3 - D5 repeat test after fix: database RUNNING
+Date: 2026-11-12 23:25 MPST
+Command: curl.exe -i http://localhost:3000/api/health
+------------------------------------------------------------
+HTTP/1.1 200 OK
+X-Content-Type-Options: nosniff
+Access-Control-Allow-Origin: http://localhost:5173
+X-Request-ID: 900ffcd1-3392-4c89-817e-dc07a8bac06f
+Content-Type: application/json; charset=utf-8
+Content-Length: 31
+Date: Thu, 12 Nov 2026 15:25:42 GMT
+
+{"status":"ok","database":"ok"}
+
+[time_total: 0.005876s]</pre>
+<h3>D5 – health check, database stopped (03-health-db-down.txt)</h3><pre class="evidence">Activity 3 - D5 repeat test after fix: database STOPPED (PostgreSQL service stopped in services.msc)
+Date: 2026-11-12 23:27 MPST
+Command: curl.exe -i http://localhost:3000/api/health
+------------------------------------------------------------
+HTTP/1.1 503 Service Unavailable
+X-Content-Type-Options: nosniff
+Access-Control-Allow-Origin: http://localhost:5173
+X-Request-ID: 738a23cc-fd03-4a78-9685-bb436e486680
+Content-Type: application/json; charset=utf-8
+Content-Length: 43
+Date: Thu, 12 Nov 2026 15:27:14 GMT
+
+{"status":"error","database":"unreachable"}
+
+[time_total: 2.017066s]
+
+Backend log during this request:
+ShopSmart API running at http://localhost:3000
+[health] database check failed
+GET /api/health 503 2007.439 ms</pre>
+<h3>D5 – health check, database started again (03-health-db-recovered.txt)</h3><pre class="evidence">Activity 3 - D5 repeat test after fix: PostgreSQL STARTED again
+Date: 2026-11-12 23:28 MPST
+Command: curl.exe -i http://localhost:3000/api/health
+------------------------------------------------------------
+HTTP/1.1 200 OK
+X-Content-Type-Options: nosniff
+Access-Control-Allow-Origin: http://localhost:5173
+X-Request-ID: 7ef334de-396a-4330-9b4e-d223b1d9b6c2
+Content-Type: application/json; charset=utf-8
+Content-Length: 31
+Date: Thu, 12 Nov 2026 15:28:16 GMT
+
+{"status":"ok","database":"ok"}
+
+[time_total: 0.072589s]
+
+Data check: curl.exe -s http://localhost:3000/api/products/4
+{"id":4,"name":"1080p Webcam","description":"Full HD webcam with privacy cover and built-in microphone.","category":"Video","emoji":"📷","price":1450,"stock":3,"active":true,"createdAt":"2026-09-10T09:47:06.991Z","updatedAt":"2026-11-12T14:28:44.497Z"}</pre>
+<h3>D1 and D2 – real browser repeat test (03-d1-browser-check.txt)</h3><pre class="evidence">Activity 3 - D1 and D2 repeat test after fix, in a real browser
+Date: 2026-11-12 23:29 MPST
+Browser: Microsoft Edge (headless, new empty profile, so no autofill or personal data)
+How: the browser was driven with the Chrome DevTools Protocol. Keys were sent one at a time,
+the same way a person types. Only the cart was used. No order was placed.
+App: frontend http://localhost:5173 (vite dev), backend http://localhost:3000, PostgreSQL running
+Script: a short local Node script (not part of the project).
+------------------------------------------------------------
+Wireless Mouse card label before the test: "Only 3 left" (stock 3)
+Start: Mouse x3 (stock limit) + Laptop Stand x1 box=3  items=4  total=₱3,150  message="" style=-
+
+D1 - select the Mouse box and type "10" (one key at a time), then press Enter
+  after typing "1"                           box=1  items=4  total=₱3,150  message="" style=-
+  after typing "0"                           box=10  items=4  total=₱3,150  message="" style=-
+  after Enter                                box=3  items=4  total=₱3,150  message="Only 3 unit(s) are available." style=error (red)
+
+D2 - select the Mouse box, type "0", then press Tab (blur)
+  after typing "0"                           box=0  items=4  total=₱3,150  message="Only 3 unit(s) are available." style=error (red)
+  after Tab (blur)                           box=3  items=4  total=₱3,150  message="Quantity must be a whole number greater than zero." style=error (red)
+
+Valid value - select the Mouse box, type "2", then press Enter
+  after typing "2"                           box=2  items=4  total=₱3,150  message="Quantity must be a whole number greater than zero." style=error (red)
+  after Enter                                box=2  items=3  total=₱2,500  message="" style=-
+
++/- buttons still work
+  after clicking +                           box=3  items=4  total=₱3,150  message="" style=-
+  after clicking -                           box=2  items=3  total=₱2,500  message="" style=-
+------------------------------------------------------------
+Result:
+- D1 fixed: typing "1" then "0" did not change the cart (total stayed P3,150). On Enter, 10 was refused
+  with "Only 3 unit(s) are available." and the box went back to 3.
+- D2 fixed: the zero-quantity message is now shown in the red error style.
+- A valid typed value (2) is applied on Enter, and the + / - buttons still work.
+Note: Wireless Mouse stock is 3 now (it was 4 in Activity 2 Case 2; order #9 used one).</pre>
+<p>The full <code>npm run check</code> output after the fixes is in <code>release-evidence/03-check-after-fix.txt</code>.</p>
+
+<h1 id="a4">Activity 4 – Deployment plan</h1>
+<figure><img src="../release-evidence/04-deployment-diagram.svg" alt="Planned staging deployment diagram"><figcaption>Planned staging deployment. Solid lines cross the internet; the dashed line is server to database. (04-deployment-diagram.svg)</figcaption></figure>
+<p><strong>Prepared by:</strong> Stephanie Joy Revano (solo project) <strong>Date:</strong> 2026-11-12 <strong>Branch:</strong> ASC_DEPLOYMENT_SHOPSMART_REVANO</p>
+<p><strong>Status: plan only.</strong> The instructor has not approved a hosting platform yet, so nothing is deployed. I kept this plan platform-neutral. I say "a static hosting service", "a Node.js hosting service" and "a managed PostgreSQL service". Steps that depend on the platform are marked <strong>(to be confirmed with the approved platform)</strong>.</p>
+<h2>2. Answers to the seven questions</h2>
+<p><strong>1. Where is the Vite build hosted, and which API URL does it use?</strong> The frontend is built with <code>npm run build --workspace frontend</code>, which makes <code>frontend/dist</code>. That folder goes to a static hosting service. The API address comes from <code>VITE_API_URL</code>, for example <code>https://&lt;api-host&gt;/api</code>. Vite puts this value into the JavaScript <strong>at build time</strong>. So it is public (anyone can read it in the browser), and if the API address changes, the frontend must be built again. It must be an <code>https://</code> address, or the browser will block the calls. The static host must send every path (like <code>/products/2</code> or <code>/cart</code>) to <code>index.html</code>, because the app uses client-side routes. <strong>(to be confirmed with the approved platform)</strong></p>
+<p><strong>2. Where does Express run, and what is the public health URL?</strong> The Express API (<code>backend/</code>) runs on a Node.js hosting service with Node 22 (see <code>.nvmrc</code>). It starts with <code>npm start --workspace backend</code> (<code>node src/server.js</code>) and listens on the <code>PORT</code> the platform gives it. The public health URL will be <code>https://&lt;api-host&gt;/api/health</code>. After my D5 fix it really checks the database: 200 <code>{"status":"ok","database":"ok"}</code> when healthy, and 503 <code>{"status":"error","database":"unreachable"}</code> when the database is down. The platform's health check should point to this path. <strong>(to be confirmed with the approved platform)</strong></p>
+<p><strong>3. Where does PostgreSQL run, and how is DATABASE_URL given?</strong> PostgreSQL runs on a managed PostgreSQL service, in its own database for staging, not my local database. The service gives a connection string. I store it as a <strong>secret</strong> environment variable called <code>DATABASE_URL</code> in the Node.js hosting service's settings. It is never written in the repo, in a document or in the frontend. Example shape only: <code>postgresql://&lt;user&gt;:****@&lt;db-host&gt;:5432/shopsmart?schema=public</code>.</p>
+<p><strong>4. Which origin does FRONTEND_URL allow (CORS)?</strong> <code>FRONTEND_URL</code> is set to the exact address of the static site, for example <code>https://&lt;frontend-host&gt;</code>, with no trailing slash and no path. CORS in <code>backend/src/app.js</code> then allows only that one origin. If <code>FRONTEND_URL</code> is missing, the code falls back to <code>http://localhost:5173</code> and the real site would be blocked, so this variable is required in staging.</p>
+<p><strong>5. Where is GEMINI_API_KEY stored, and how does it stay out of the bundle and the repo?</strong> It is a <strong>secret</strong> environment variable in the Node.js hosting service only. Only <code>backend/src/services/gemini.js</code> reads it, on the server. It does not start with <code>VITE_</code>, so Vite never puts it into the frontend build. <code>.env</code> files are in <code>.gitignore</code>, and only the <code>.env.example</code> files (with empty values) are in git. Before release I search <code>frontend/dist</code> for the Gemini key prefix (see <code>05-secrets-check.txt</code>). If the key is missing or Gemini fails, the assistant still works with its catalog-based fallback.</p>
+<p><strong>6. How are migrations run?</strong> Before the first use, and after each new migration, I run this from <code>backend/</code>, with <code>DATABASE_URL</code> pointing at the staging database:</p>
+<pre>npx prisma generate
+npx prisma migrate deploy</pre>
+<p>This is Prisma 6. <code>migrate deploy</code> only applies the migration files in <code>backend/prisma/migrations</code>. It never resets data. I will <strong>not</strong> run <code>npm run db:seed</code> (it deletes all orders and products), <code>prisma migrate dev</code>, <code>prisma migrate reset</code> or <code>prisma db push</code> on any database with real work in it. If staging needs sample products, I will add them once to the empty database and write that down. <strong>(how to run a one-off command is to be confirmed with the approved platform)</strong></p>
+<p><strong>7. Who can access staging, and what data is used?</strong> Staging is private. Only the instructor (and me) should get the link. There is no login in this app, so the link itself must not be shared publicly. If the platform supports a password or access list, I will turn it on. <strong>(to be confirmed with the approved platform)</strong> Only fictional data is used, for example "Juan Dela Cruz, juan.delacruz@example.com, 123 Mabini Street, Barangay Uno, Sample City". No real names, emails, addresses or payments. The checkout is simulated.</p>
+<h2>3. Environment variables per service</h2>
+<table><thead><tr><th>Service</th><th>Name</th><th>Public or secret</th><th>Example placeholder value</th><th>Notes</th></tr></thead><tbody><tr><td>Static hosting (build time)</td><td><code>VITE_API_URL</code></td><td>Public</td><td><code>https://&lt;api-host&gt;/api</code></td><td>Built into the JavaScript. Rebuild if it changes.</td></tr><tr><td>Node.js hosting (API)</td><td><code>DATABASE_URL</code></td><td><strong>Secret</strong></td><td><code>postgresql://&lt;user&gt;:****@&lt;db-host&gt;:5432/shopsmart?schema=public</code></td><td>From the managed PostgreSQL service</td></tr><tr><td>Node.js hosting (API)</td><td><code>GEMINI_API_KEY</code></td><td><strong>Secret</strong></td><td><code>****</code></td><td>From Google AI Studio. Server only.</td></tr><tr><td>Node.js hosting (API)</td><td><code>FRONTEND_URL</code></td><td>Public</td><td><code>https://&lt;frontend-host&gt;</code></td><td>Exact CORS origin</td></tr><tr><td>Node.js hosting (API)</td><td><code>NODE_ENV</code></td><td>Public</td><td><code>production</code></td><td>Set for staging. The code does not read it yet.</td></tr><tr><td>Node.js hosting (API)</td><td><code>PORT</code></td><td>Public</td><td>set by the platform (local default 3000)</td><td>Do not hard-code it</td></tr><tr><td>Node.js hosting (API)</td><td><code>GEMINI_MODEL</code></td><td>Public</td><td><code>gemini-3.5-flash-lite</code> (optional)</td><td>Default is used if empty</td></tr><tr><td>Node.js hosting (API)</td><td><code>GEMINI_TIMEOUT_MS</code></td><td>Public</td><td><code>8000</code> (optional)</td><td>Default is used if empty</td></tr><tr><td>Managed PostgreSQL</td><td>admin user and password</td><td><strong>Secret</strong></td><td><code>****</code></td><td>Kept by the database service. Only the <code>DATABASE_URL</code> is copied to the API.</td></tr></tbody></table>
+<h2>4. Order of steps (when a platform is approved)</h2>
+<ol><li>Create the managed PostgreSQL database. Copy its connection string into the API's secrets as <code>DATABASE_URL</code>.</li><li>Create the Node.js service from this repo. Set the build to <code>npm ci</code> and <code>npx prisma generate</code> (in <code>backend/</code>), and the start to <code>npm start --workspace backend</code>. Add all API variables from the table.</li><li>Run <code>npx prisma migrate deploy</code> from <code>backend/</code> once against the staging database.</li><li>Open <code>https://&lt;api-host&gt;/api/health</code> and check for <code>{"status":"ok","database":"ok"}</code>.</li><li>Build the frontend with <code>VITE_API_URL=https://&lt;api-host&gt;/api</code> and upload <code>frontend/dist</code> to the static host. Turn on the "rewrite to index.html" rule.</li><li>Set <code>FRONTEND_URL</code> on the API to the static site's address and restart the API.</li><li>Smoke test with fictional data only: products, search, cart, one checkout, one assistant question.</li></ol>
+<h2>5. Known deployment risks and what to do</h2>
+<table><thead><tr><th>Risk (from the baseline report)</th><th>Where</th><th>What to do</th></tr></thead><tbody><tr><td>The rate limiter does not set "trust proxy". Behind a hosting proxy, all users may share one IP, so one user could use up the limit for everyone.</td><td><code>backend/src/app.js</code>, <code>backend/src/routes/assistant.js</code></td><td>Before deploying, add <code>app.set('trust proxy', 1)</code> (or the value the platform documents) and test it. Not changed now because the platform is not chosen. <strong>(to be confirmed with the approved platform)</strong></td></tr><tr><td>CORS falls back to <code>http://localhost:5173</code> if <code>FRONTEND_URL</code> is missing.</td><td><code>backend/src/app.js:14</code></td><td>Always set <code>FRONTEND_URL</code>. Check the <code>Access-Control-Allow-Origin</code> header in the first smoke test.</td></tr><tr><td><code>npm run db:seed</code> deletes all orders and products. The README "Common problems" section also suggests running it.</td><td><code>backend/prisma/seed.js:15-17</code>, <code>README.md</code></td><td>Never run it on staging or on a database with work in it. Use <code>prisma migrate deploy</code> only.</td></tr><tr><td><code>npm audit</code> reports 17 vulnerabilities (5 critical, 8 high, 4 moderate) in dependencies.</td><td><code>package-lock.json</code></td><td>Not fixed in this challenge (package upgrades were not allowed). Before a real public release, update the packages in a separate change, then run <code>npm run check</code> and the smoke test again.</td></tr><tr><td><code>POST /api/orders</code> has no login and no rate limit.</td><td><code>backend/src/routes/orders.js</code></td><td>Keep staging private. Add a rate limit and login before any public release.</td></tr><tr><td>A checkout that times out in the browser (15 s) may still create an order. A retry could make a duplicate.</td><td><code>frontend/src/services/api.js</code>, <code>CheckoutPage.jsx</code></td><td>Low risk on a small staging database. Tell testers to check the order list before trying again.</td></tr><tr><td>The health check now returns 503 when the database is down. A platform may restart the API in a loop during a database outage.</td><td><code>backend/src/app.js</code></td><td>Use a grace period or retry count in the platform's health check settings. <strong>(to be confirmed with the approved platform)</strong></td></tr><tr><td>The Gemini provider was unstable during testing (503 and timeouts).</td><td><code>backend/src/services/gemini.js</code></td><td>The fallback answer already works. Watch the logs for <code>fallback reason=</code> lines. Keep the key secret and watch the quota.</td></tr><tr><td>Client-side routes break on refresh if the static host does not rewrite paths.</td><td>Static hosting</td><td>Add a rewrite of all paths to <code>/index.html</code>.</td></tr></tbody></table>
+<h2>6. What stays the same as local</h2>
+<ul><li>The same code and the same <code>npm run check</code> must pass before each deploy.</li><li>The same rule for data: fictional customers only, and no reseeding.</li><li>The same evidence: save the health output and the smoke test output for staging too.</li></ul>
+
+
+<h1 id="a5">Activity 5 – Local release candidate checks</h1>
+<h2>Final check</h2>
+<table><thead><tr><th>Step</th><th>Result</th></tr></thead><tbody>
+<tr><td><code>npm run check</code> (repo root)</td><td><strong>Exit code 0</strong></td></tr>
+<tr><td>Lint, frontend and backend</td><td>Clean</td></tr>
+<tr><td>Frontend tests (vitest)</td><td>15/15 passed</td></tr>
+<tr><td>Backend tests (node:test)</td><td>61/61 passed</td></tr>
+<tr><td>Frontend build (Vite)</td><td>OK</td></tr></tbody></table>
+<p>Full output: <code>release-evidence/05-final-check.txt</code>.</p>
+<h2>Smoke test (05-smoke-test.txt)</h2>
+<table><thead><tr><th>Check</th><th>Result</th></tr></thead><tbody>
+<tr><td>Health</td><td>200 <code>{"status":"ok","database":"ok"}</code></td></tr>
+<tr><td>Products list</td><td>200, 6 products</td></tr>
+<tr><td>One order, 1 × Laptop Stand (product 5), fictional customer Juan Dela Cruz</td><td>201, order <strong>#11</strong>, total 1200 (server price)</td></tr>
+<tr><td>Stock after the order</td><td>Laptop Stand 7 → 6 (down by 1)</td></tr>
+<tr><td>Earlier orders</td><td>Orders #1 to #10 still exist (no reseed)</td></tr>
+<tr><td>Assistant: "Which keyboard is below ₱2,000?"</td><td>200, <strong>live Gemini answer</strong> (no fallback): Compact Mechanical Keyboard at ₱1,850, with a source to product #2</td></tr>
+<tr><td>Cart</td><td>Browser only, so curl cannot test it. Verified in Activity 2 Case 2 and in the Activity 3 browser check.</td></tr></tbody></table>
+<pre class="evidence">Activity 5 - local release candidate smoke test
+Date: 2026-11-12 23:32 MPST
+Commit: c6b9ff6 on ASC_DEPLOYMENT_SHOPSMART_REVANO
+App: backend http://localhost:3000 (node src/server.js), frontend http://localhost:5173 (vite dev), PostgreSQL localhost:5432
+Test data: fictional customer only (Juan Dela Cruz). Security headers from Helmet are left out below to keep it short.
+
+=== 1. Health ===
+&gt; curl.exe -i http://localhost:3000/api/health
+HTTP/1.1 200 OK
+X-Content-Type-Options: nosniff
+Access-Control-Allow-Origin: http://localhost:5173
+X-Request-ID: 47b69331-3d2d-4b37-9104-98b4382acff9
+Content-Type: application/json; charset=utf-8
+Content-Length: 31
+Date: Thu, 12 Nov 2026 15:32:43 GMT
+
+{"status":"ok","database":"ok"}
+
+
+=== 2. Products list ===
+&gt; curl.exe -s http://localhost:3000/api/products
+Summary:
+  6 products: #1 Wireless Mouse P650 stock 3; #2 Compact Mechanical Keyboard P1850 stock 7; #3 USB-C Study Lamp P900 stock 0; #4 1080p Webcam P1450 stock 3; #5 Laptop Stand P1200 stock 7; #6 USB Headset P1350 stock 6
+
+=== 3. Laptop Stand (product 5) stock BEFORE the order ===
+&gt; curl.exe -s http://localhost:3000/api/products/5
+{"id":5,"name":"Laptop Stand","description":"Foldable aluminum stand for laptops up to 16 inches.","category":"Study","emoji":"💻","price":1200,"stock":7,"active":true,"createdAt":"2026-09-10T09:47:06.991Z","updatedAt":"2026-10-15T12:06:25.609Z"}
+
+=== 4. Create ONE order (1 x Laptop Stand, productId 5) ===
+&gt; curl.exe -i -X POST http://localhost:3000/api/orders -H "Content-Type: application/json" --data-binary @order.json
+  order.json: {"customerName":"Juan Dela Cruz","email":"juan.delacruz@example.com","address":"123 Mabini Street, Barangay Uno, Sample City","items":[{"productId":5,"quantity":1}]}
+HTTP/1.1 201 Created
+X-Content-Type-Options: nosniff
+Access-Control-Allow-Origin: http://localhost:5173
+X-Request-ID: 2312519e-4624-4885-94c5-dfce91865f77
+Content-Type: application/json; charset=utf-8
+Content-Length: 282
+Date: Thu, 12 Nov 2026 15:32:43 GMT
+
+{"id":11,"customerName":"Juan Dela Cruz","email":"juan.delacruz@example.com","address":"123 Mabini Street, Barangay Uno, Sample City","status":"PENDING","total":1200,"createdAt":"2026-11-12T15:32:43.544Z","items":[{"id":14,"orderId":11,"productId":5,"quantity":1,"unitPrice":1200}]}
+
+
+=== 5. Laptop Stand (product 5) stock AFTER the order ===
+&gt; curl.exe -s http://localhost:3000/api/products/5
+{"id":5,"name":"Laptop Stand","description":"Foldable aluminum stand for laptops up to 16 inches.","category":"Study","emoji":"💻","price":1200,"stock":6,"active":true,"createdAt":"2026-09-10T09:47:06.991Z","updatedAt":"2026-11-12T15:32:43.529Z"}
+
+Order check:
+  New order id: #11 (greater than 10: yes), total 1200, unitPrice 1200, status PENDING
+  Laptop Stand stock: 7 -&gt; 6 (went down by 1: correct)
+
+=== 6. Assistant question ===
+&gt; curl.exe -s -i -X POST http://localhost:3000/api/assistant/questions -H "Content-Type: application/json" --data-binary @ask.json
+  ask.json: {"question":"Which keyboard is below ₱2,000?"}
+HTTP/1.1 200 OK
+X-Content-Type-Options: nosniff
+Access-Control-Allow-Origin: http://localhost:5173
+X-Request-ID: a30a6ef7-ae47-48c4-8a8c-ec137b77943e
+Content-Type: application/json; charset=utf-8
+Content-Length: 293
+Date: Thu, 12 Nov 2026 15:32:47 GMT
+
+{"answer":"We have the Compact Mechanical Keyboard available for ₱1,850, which fits your budget perfectly!","recommendedProducts":[{"id":2,"name":"Compact Mechanical Keyboard","price":1850,"category":"Accessories"}],"sources":[{"type":"product","id":2,"name":"Compact Mechanical Keyboard"}]}
+[time_total: 3.492325s]
+
+Backend log lines for this smoke test:
+GET /api/health 200 1.524 ms
+GET /api/products 200 1.438 ms
+GET /api/products/5 200 1.682 ms
+POST /api/orders 201 48.484 ms
+GET /api/products/5 200 2.230 ms
+POST /api/assistant/questions 200 3481.474 ms
+
+=== 7. Earlier orders still exist (read-only Prisma query, ids and counts only, run from backend/) ===
+Order ids in the database: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
+Total orders: 11. Orders #1 to #10 present: yes
+Products: 6 (no reseed: product ids 1-6 unchanged, stock values are not the seed values)
+
+=== Notes ===
+- The assistant answered with a live Gemini answer this time: no fallback note in the answer and no 'fallback reason=' line in the backend log. It took about 3.5 s.
+  In Activity 2 the provider failed (503 and TIMEOUT) and the fallback was used, so both paths have been seen.
+- Only ONE order was created in this smoke test (#11). It uses fictional data.
+- The cart lives in the browser only (React state), so curl cannot test it. Cart behavior was verified in Activity 2 Case 2,
+  and again in a real browser in Activity 3 (03-d1-browser-check.txt).
+- Result: PASS (health, products, order, stock, assistant).</pre>
+<h2>Secrets and privacy check (05-secrets-check.txt)</h2>
+<pre class="evidence">Activity 5 - secrets and privacy check
+Date: 2026-11-12 23:33 MPST
+Commit: c6b9ff6 on ASC_DEPLOYMENT_SHOPSMART_REVANO
+No secret value is printed in this file. Real values are only compared inside a script, and only counts are shown.
+
+=== 1. Env files tracked by git ===
+&gt; git ls-files | grep -i env
+backend/.env.example
+frontend/.env.example
+Result: only the two .env.example files are tracked. backend/.env is not tracked.
+
+=== 2. Is backend/.env git-ignored? ===
+&gt; git check-ignore -v backend/.env
+.gitignore:3:.env	backend/.env
+&gt; git ls-files --error-unmatch backend/.env
+error: not tracked (good)
+
+=== 3. .env.example files have no real values ===
+backend/.env.example:
+  DATABASE_URL="postgresql://shopsmart_user:****@localhost:5432/shopsmart?schema=public"
+  PORT=3000
+  FRONTEND_URL=http://localhost:5173
+  NODE_ENV=development
+  
+  # Google Gemini (server only; never put this key in frontend/.env or VITE_* variables)
+  GEMINI_API_KEY=
+  # Optional. Defaults: gemini-3.5-flash-lite and 8000 ms.
+  GEMINI_MODEL=
+  GEMINI_TIMEOUT_MS=
+frontend/.env.example:
+  VITE_API_URL=http://localhost:3000/api
+Note: backend/.env.example has the classroom demo database password from the starter (masked above). It is not the password of any hosted database.
+
+=== 4. Frontend build (frontend/dist, built by npm run check) ===
+Files: 3
+&gt; grep -rl "AIza" frontend/dist        (Google API key prefix)
+  files found: 0
+&gt; grep -rl "DATABASE_URL" frontend/dist
+  files found: 0
+&gt; grep -rli "GEMINI_API_KEY" frontend/dist
+  files found: 0
+
+=== 5. Real secret values compared against files (values not printed) ===
+  DATABASE_URL value     in frontend/dist (built bundle): 0 file(s)
+  database password      in frontend/dist (built bundle): 0 file(s)
+  GEMINI_API_KEY value   in frontend/dist (built bundle): 0 file(s)
+  DATABASE_URL value     in all files tracked by git: 2 file(s)
+  database password      in all files tracked by git: 2 file(s)
+  GEMINI_API_KEY value   in all files tracked by git: 0 file(s)
+  Explanation of the 2 files: they are README.md and backend/.env.example from the original starter. My local
+  backend/.env still uses the classroom demo database user and password that the starter README tells every
+  student to create (local PostgreSQL only, port 5432 on my laptop). It is not a hosted or shared database.
+  The Gemini key is in 0 tracked files. For staging, the hosted database must use a new, different password
+  (see 04-deployment-plan.md), so this demo password will never protect real data.
+
+=== 6. Privacy: real personal data in tracked files ===
+Checked for my real email domain/address words from the removed screenshot (patterns only, not printed in full).
+  text files with these words: 0
+  The screenshot release-evidence/screenshots/02-6a-checkout-api-down.png (real autofill data) was deleted in commit c9550ab.
+  It still exists in the older local commit 9d27603. That branch was never pushed, and the submission ZIP is built from HEAD only.
+  Test data used in all new tests: Juan Dela Cruz / Maria Santos with example.com emails and Sample City addresses.
+
+Result: PASS. No secret is in git or in the frontend build. backend/.env is ignored.</pre>
+
+<h1 id="release">Release note</h1>
+<h2>Version and date</h2>
+<table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>ShopSmart local release candidate 1 (RC1)</td></tr><tr><td>Date</td><td>2026-11-12</td></tr><tr><td>Branch</td><td><code>ASC_DEPLOYMENT_SHOPSMART_REVANO</code></td></tr><tr><td>Commit tested</td><td><code>f590296</code> (last code and check commit). This note and the PDF are added in the next commit.</td></tr><tr><td>Prepared by</td><td>Stephanie Joy Revano (solo)</td></tr></tbody></table>
+<h2>Working features (customer journeys I verified)</h2>
+<table><thead><tr><th>Journey</th><th>How it was checked</th><th>Evidence</th></tr></thead><tbody><tr><td>Browse products and search by name or description</td><td>Activity 2 Case 1 (search with results, no results, category + search)</td><td><code>02-test-record.md</code> Case 1</td></tr><tr><td>Cart: add, change quantity, remove, totals</td><td>Activity 2 Case 2, and again in a real browser after the D1 fix</td><td><code>02-test-record.md</code> Case 2, <code>03-d1-browser-check.txt</code></td></tr><tr><td>Simulated checkout with server-side validation and server prices</td><td>Activity 2 Case 3 (bad email, blank address, valid order #9), smoke test order #11</td><td><code>02-test-record.md</code> Case 3, <code>05-smoke-test.txt</code></td></tr><tr><td>Stock rule (out-of-stock blocked in the browser and on the server, two-tab test)</td><td>Activity 2 Case 4</td><td><code>02-test-record.md</code> Case 4</td></tr><tr><td>Product assistant with sources, no-match answer and fallback</td><td>Activity 2 Case 5 (fallback), smoke test (live Gemini answer)</td><td><code>02-test-record.md</code> Case 5, <code>05-smoke-test.txt</code></td></tr><tr><td>Failure handling (API down, database down, AI down)</td><td>Activity 2 Case 6</td><td><code>02-test-record.md</code> Case 6</td></tr><tr><td>Health check that reports the database state</td><td>Activity 3 D5 repeat test (database up, stopped, started again)</td><td><code>03-health-db-*.txt</code></td></tr></tbody></table>
+<p>Final <code>npm run check</code>: exit code 0. Lint clean, frontend tests 15/15, backend tests 61/61, build OK (<code>05-final-check.txt</code>).</p>
+<h2>Fixed in this release</h2>
+<ul><li><strong>D5:</strong> <code>/api/health</code> now checks the database. It returns 503 <code>{"status":"error","database":"unreachable"}</code> when the database is down.</li><li><strong>D1:</strong> typing "10" in the cart quantity box no longer saves "1" first. The value is applied on blur or Enter.</li><li><strong>D2:</strong> cart validation messages now use the red error style.</li></ul>
+<h2>Known limitations</h2>
+<ul><li><strong>No login and no roles.</strong> Every route is public. Anyone with the address can place a simulated order.</li><li><strong>The cart is not saved.</strong> It lives in the browser's memory, so a page refresh empties it.</li><li><strong>The AI provider was unstable during testing.</strong> Gemini returned 503 and timed out in Activity 2, so the catalog-based fallback was often used. In the final smoke test Gemini answered normally. The fallback always shows a note.</li><li><strong>Open defects:</strong></li><ul><li><strong>D3:</strong> checkout errors do not say which field is wrong. If you see "Check the customer and cart information.", check that the email is valid and the address has at least 10 real characters.</li><li><strong>D4:</strong> when the AI is down, the fallback can suggest a product that only matches by a category word (for example the Laptop Stand for "study lamp"). It never suggests an out-of-stock product.</li></ul><li><strong>npm audit</strong> reports 17 vulnerabilities (5 critical, 8 high, 4 moderate) in dependencies. They were there before this challenge. Package upgrades were out of scope, so they are not fixed.</li><li><strong>No rate limit on orders,</strong> and a checkout that times out in the browser could create a duplicate order if retried.</li><li><strong>Hosting is not done.</strong> See the deployment status below.</li></ul>
+<h2>Local startup steps</h2>
+<p>The full step-by-step guide is in <code>README.md</code>. Short version, in order (PowerShell, from the project root unless noted):</p>
+<ol><li>Install Node.js 22 and PostgreSQL. Start the PostgreSQL service.</li><li><code>Copy-Item backend\.env.example backend\.env</code> and <code>Copy-Item frontend\.env.example frontend\.env</code>. Put your own database URL and, if you have one, a Gemini key in <code>backend/.env</code>. Never commit <code>.env</code>.</li><li><code>npm install</code></li><li><code>cd backend</code>, then <code>npx prisma generate</code>. <strong>Prisma commands must be run from <code>backend/</code></strong>, because that is where <code>.env</code> is.</li><li>Still in <code>backend/</code>: for a new, empty database run <code>npx prisma migrate deploy</code>. For an existing database, <code>npx prisma migrate status</code> should say "Database schema is up to date!".</li><li>Sample products: only on a brand-new, empty database, run <code>npm run db:seed</code> once. <strong>Never run <code>db:seed</code> on a database with data you want to keep.</strong> It deletes all orders and resets all products.</li><li><code>cd ..</code> back to the root, then <code>npm run check</code> (lint, tests, build).</li><li><code>npm run dev</code>, then open http://localhost:5173. The API health check is http://localhost:3000/api/health.</li></ol>
+<h2>Deployment status</h2>
+<p><strong>Local release candidate only. Live staging was not done because hosting has not been approved yet.</strong> The deployment plan is ready in <code>04-deployment-plan.md</code>, with a diagram in <code>04-deployment-diagram.svg</code>.</p>
+<h2>Team record (solo)</h2>
+<table><thead><tr><th>Item</th><th>Record</th></tr></thead><tbody><tr><td>Team</td><td>Stephanie Joy Revano (solo)</td></tr><tr><td>One test I ran</td><td>Activity 3 D5 repeat test. I stopped the PostgreSQL service and called <code>/api/health</code>. Before the fix it said 200 "ok". After the fix it returned 503 "unreachable" in about 2 seconds. After I started PostgreSQL again it returned 200, and product 4 still had stock 3.</td></tr><tr><td>One contribution</td><td>I fixed D5 (database-aware health check, with 3 node:test tests), D1 (cart quantity draft, applied on blur or Enter) and D2 (error style), and I verified all three.</td></tr><tr><td>One issue I can explain</td><td>D1. The quantity box called <code>setQuantity</code> on every key press. When I typed "10", the "1" was saved first and the cart dropped from 4 mice to 1, even though the screen only showed the "Only 4 unit(s)" error. The fix keeps a draft of the typed text and only updates the cart when I leave the box or press Enter.</td></tr></tbody></table>
+
+
+<h1 id="appendix">Appendix – How to run the project locally</h1>
+<p>These steps are for Windows PowerShell. The full guide is in <code>README.md</code>.</p>
+<ol>
+<li>Install Node.js 22, Git and PostgreSQL. Make sure the PostgreSQL service is running.</li>
+<li>From the project root, create the env files: <code>Copy-Item backend\.env.example backend\.env</code> and <code>Copy-Item frontend\.env.example frontend\.env</code>. Edit <code>backend/.env</code> with your own database URL. Add a <code>GEMINI_API_KEY</code> only if you have one (without it the assistant uses its fallback). Never commit or share <code>.env</code>.</li>
+<li>Install packages: <code>npm install</code></li>
+<li>Go to the backend folder: <code>cd backend</code>. All Prisma commands run from here.</li>
+<li>Generate the Prisma client: <code>npx prisma generate</code></li>
+<li>Create or check the tables. New, empty database: <code>npx prisma migrate deploy</code>. Existing database: <code>npx prisma migrate status</code> should say "Database schema is up to date!".</li>
+<li>Sample products: only on a brand-new, empty database, run <code>npm run db:seed</code> once. <strong>Never run it on a database with data you want to keep.</strong> It deletes all orders and products.</li>
+<li>Go back to the root: <code>cd ..</code></li>
+<li>Run all checks: <code>npm run check</code></li>
+<li>Start the app: <code>npm run dev</code>. Open <code>http://localhost:5173</code>. The health check is <code>http://localhost:3000/api/health</code>.</li>
+<li>Stop with <code>Ctrl + C</code>.</li>
+</ol>
+<h2>Common problems</h2>
+<table><thead><tr><th>Problem</th><th>What to do</th></tr></thead><tbody>
+<tr><td>Prisma error P1012 "Environment variable not found: DATABASE_URL"</td><td>You ran Prisma from the root. Run it from <code>backend/</code>.</td></tr>
+<tr><td>Health returns 503 <code>"database":"unreachable"</code></td><td>Start the PostgreSQL service and check <code>DATABASE_URL</code>.</td></tr>
+<tr><td>Products do not appear</td><td>Check the health URL and the backend terminal. Do not reseed a database that has orders.</td></tr>
+<tr><td>Port 3000 or 5173 is busy</td><td>Stop the other terminal that runs the app, then start again.</td></tr>
+<tr><td>Assistant shows "(AI assistant unavailable …)"</td><td>The AI provider failed or there is no key. The catalog-based answer is still correct.</td></tr></tbody></table>
+</body></html>
