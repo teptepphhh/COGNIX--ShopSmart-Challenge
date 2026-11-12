@@ -204,6 +204,32 @@ Backend log for this case: `screenshots/02-5-backend-log.png`. During testing th
 
 ---
 
+## Case 6 – Failure handling
+
+### 6a. API server stopped (frontend running)
+| Field | Record |
+|---|---|
+| Starting state | Frontend running with `npm run dev --workspace frontend`; backend stopped (`Ctrl + C`). One tab prepared on the checkout page with Laptop Stand × 1 and fictional details |
+| Action and test data | (1) Click "Place simulated order"; (2) reload the Products page; (3) ask the assistant `Which keyboard is below ₱2,000?` |
+| Expected result | Each request ends and shows a useful error; no endless loading; the cart and form data are kept; no order is created |
+| Observed result and evidence | (1) Checkout: "Could not reach the ShopSmart server." in the error style; header still Cart (1); form values kept; no order created. (2) Products: "Could not reach the ShopSmart server. Make sure the backend is running."; no "Loading products…" left on screen. (3) Assistant: "Could not reach the ShopSmart server."; the button returned to "Ask ShopSmart". Evidence: `screenshots/02-6a-checkout-api-down.png`, `screenshots/02-6a-products-api-down.png`, `screenshots/02-6a-assistant-api-down.png` |
+| Decision | **Pass** |
+
+### 6b. Database stopped (API running)
+| Field | Record |
+|---|---|
+| Starting state | Backend running; PostgreSQL service stopped in `services.msc` |
+| Action and test data | (1) `curl.exe -i http://localhost:3000/api/health`; (2) reload the Products page; (3) check the backend log; (4) restart PostgreSQL and check the data |
+| Expected result | The health check reports that the service is not healthy; product requests fail with a controlled error and no internal details; the browser shows a useful message; after restart, data is unchanged |
+| Observed result and evidence | (1) Health: **`HTTP/1.1 200 OK`, `{"status":"ok"}`**, although the database was unreachable – **Fail (D5)**. (2) Browser: "The server could not complete the request. Make sure the backend is running."; loading ended. The message is generic: the backend was running and the database was down. (3) Backend log: `GET /api/products 500` (≈4 s) with `PrismaClientInitializationError … Can't reach database server at localhost:5432`; the API response contained only `INTERNAL_ERROR`, a generic message and a `traceId` (no internal details, no credentials). (4) After restarting PostgreSQL, `GET /api/products/4` → `"stock":3`, `updatedAt 2026-11-12T14:28:44.497Z` (unchanged). Evidence: `screenshots/02-6b-health-db-down.png`, `screenshots/02-6b-browser-db-down.png`, `screenshots/02-6b-backend-log-db-down.png`, `screenshots/02-6b-recovered.png` |
+| Decision | **Fail** – the failure is handled safely for users, but the health endpoint reports "ok" while the database is down (**Defect D5**) |
+
+### 6c. AI provider failure
+Observed naturally during Case 5: the provider returned HTTP 503 and later timed out after 8 s. Both requests returned 200 with catalog-based results and the note "(AI assistant unavailable — showing catalog-based results.)"; loading ended in ≈4.2 s and ≈8.0 s. Only reason codes were logged (`PROVIDER_ERROR status=503`, `TIMEOUT`). Evidence: `screenshots/02-5-backend-log.png`, `screenshots/02-5a-assistant-keyboard.png`, `screenshots/02-5c-assistant-out-of-stock.png`. **Decision: Pass.**
+
+
+---
+
 ## Defect log
 
 ### D1 – Typing a multi-digit cart quantity saves the first digit (Severity: Medium, Status: Open)
@@ -253,3 +279,17 @@ Backend log for this case: `screenshots/02-5-backend-log.png`. During testing th
 | Impact | Low: the answer is grounded (real product, correct price, source shown) and the out-of-stock lamp is never recommended, but the suggestion may mislead the customer |
 | Suspected cause | `backend/src/services/assistant.js` `rankProducts`: one matching keyword (including category words) is enough; only the AI path can judge that no product fits |
 | Evidence | `screenshots/02-5c-assistant-out-of-stock.png` |
+
+
+
+
+### D5 – Health endpoint reports "ok" while the database is down (Severity: Medium, Status: Open)
+| Field | Record |
+|---|---|
+| Starting state | Backend running; PostgreSQL service stopped |
+| Action | `curl.exe -i http://localhost:3000/api/health` |
+| Actual result | `HTTP/1.1 200 OK` with `{"status":"ok"}`, while `GET /api/products` fails with 500 (`Can't reach database server at localhost:5432`) |
+| Expected result | The health check reports an unhealthy state (for example 503 with `{"status":"error","database":"unreachable"}`) |
+| Impact | A hosting platform or evaluator relying on `/api/health` would see a healthy service while customers cannot load products or place orders |
+| Suspected cause | `backend/src/app.js`: `/api/health` returns a static response and never checks the database |
+| Evidence | `screenshots/02-6b-health-db-down.png`, `screenshots/02-6b-backend-log-db-down.png` |
