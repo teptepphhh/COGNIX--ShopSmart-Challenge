@@ -25,3 +25,7 @@ test('duplicate products fail order validation', () => {
 test('an oversized assistant question fails validation', () => {
   assert.equal(assistantQuestionSchema.safeParse({ question: 'x'.repeat(301) }).success, false);
 });
+
+test('an assistant question shorter than three characters fails validation', () => {
+  assert.equal(assistantQuestionSchema.safeParse({ question: 'hi' }).success, false);
+});
