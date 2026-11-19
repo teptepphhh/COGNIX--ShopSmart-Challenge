@@ -12,6 +12,7 @@ export async function request(path, { timeoutMs, ...options } = {}) {
   try {
     response = await fetch(`${API_URL}${path}`, {
       ...options,
+      credentials: 'include',
       signal: controller?.signal,
       headers: { 'Content-Type': 'application/json', ...options.headers }
     });
@@ -22,6 +23,7 @@ export async function request(path, { timeoutMs, ...options } = {}) {
     if (timer) clearTimeout(timer);
   }
 
+  if (response.status === 204) return null;
   const data = await response.json().catch(() => null);
   if (!response.ok) {
     const message = data?.error?.message || `Request failed with status ${response.status}.`;
@@ -37,6 +39,11 @@ export async function request(path, { timeoutMs, ...options } = {}) {
 export const api = {
   getProducts: (query = '') => request(`/products${query ? `?search=${encodeURIComponent(query)}` : ''}`),
   getProduct: (id) => request(`/products/${id}`),
+  register: (body) => request('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
+  login: (body) => request('/auth/login', { method: 'POST', body: JSON.stringify(body) }),
+  logout: () => request('/auth/logout', { method: 'POST' }),
+  me: () => request('/auth/me'),
+  getOrders: () => request('/orders'),
   createOrder: (order) => request('/orders', { method: 'POST', body: JSON.stringify(order) }),
   askAssistant: (question) => request('/assistant/questions', {
     method: 'POST', body: JSON.stringify({ question }), timeoutMs: 20000

@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
+import { requireAuth } from '../middleware/requireAuth.js';
 import { orderSchema } from '../validators/schemas.js';
 const router = Router();
 
-router.post('/', async (request, response, next) => {
+router.post('/', requireAuth, async (request, response, next) => {
   try {
     const parsed = orderSchema.safeParse(request.body);
     if (!parsed.success) return response.status(422).json({ error: { code: 'INVALID_ORDER', message: 'Check the customer and cart information.', details: parsed.error.flatten() } });
@@ -29,7 +30,7 @@ router.post('/', async (request, response, next) => {
       }
       return transaction.order.create({
         data: {
-          customerName: parsed.data.customerName, email: parsed.data.email, address: parsed.data.address, total,
+          userId: request.user.id, customerName: parsed.data.customerName, email: parsed.data.email, address: parsed.data.address, total,
           items: { create: normalizedItems.map((item) => ({ productId: item.productId, quantity: item.quantity, unitPrice: item.product.price })) }
         },
         include: { items: true }
@@ -39,5 +40,25 @@ router.post('/', async (request, response, next) => {
   } catch (error) { next(error); }
 });
 
-// WEEK 4 IMPROVEMENT: Associate orders with authenticated users and add a protected GET route.
+const present = (order) => ({ ...order, total: Number(order.total), items: order.items.map((item) => ({ ...item, unitPrice: Number(item.unitPrice) })) });
+
+// WEEK 4 IMPROVEMENT: orders belong to the signed-in user; only the owner can read them.
+router.get('/', requireAuth, async (request, response, next) => {
+  try {
+    const orders = await prisma.order.findMany({ where: { userId: request.user.id }, include: { items: true }, orderBy: { id: 'desc' } });
+    response.json(orders.map(present));
+  } catch (error) { next(error); }
+});
+
+router.get('/:id', requireAuth, async (request, response, next) => {
+  try {
+    const id = Number(request.params.id);
+    if (!Number.isInteger(id) || id < 1) return response.status(422).json({ error: { code: 'INVALID_ID', message: 'Order id must be a positive whole number.' } });
+    const order = await prisma.order.findUnique({ where: { id }, include: { items: true } });
+    if (!order) return response.status(404).json({ error: { code: 'ORDER_NOT_FOUND', message: 'Order could not be found.' } });
+    if (order.userId !== request.user.id) return response.status(403).json({ error: { code: 'FORBIDDEN', message: 'You do not have access to this order.' } });
+    response.json(present(order));
+  } catch (error) { next(error); }
+});
+
 export default router;

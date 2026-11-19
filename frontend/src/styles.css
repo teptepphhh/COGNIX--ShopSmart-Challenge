@@ -83,3 +83,5 @@ form { display: grid; gap: 1rem; }
 
 /* LAB 6: field-level checkout errors */
 .field-errors { margin: 0.4rem 0 0; padding-left: 1.2rem; }
+
+.link-button { background: none; border: 0; color: inherit; text-decoration: underline; cursor: pointer; padding: 0 0 0 1rem; font: inherit; }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext.jsx';
 import StatusMessage from '../components/StatusMessage.jsx';
 import { useCart } from '../context/CartContext.jsx';
 import { api } from '../services/api.js';
@@ -8,7 +9,8 @@ import { describeOrderError } from '../utils/orderErrors.js';
 
 export default function CheckoutPage() {
   const { cart, total, clearCart } = useCart();
-  const [form, setForm] = useState({ customerName: '', email: '', address: '' });
+  const { user } = useAuth();
+  const [form, setForm] = useState({ customerName: user?.name || '', email: user?.email || '', address: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [order, setOrder] = useState(null);
@@ -44,6 +46,8 @@ export default function CheckoutPage() {
       <Link className="button" to="/">Continue shopping</Link>
     </section>
   );
+
+  if (!user) return <section><div className="empty-state"><h1>Sign in to check out</h1><p>Orders are saved to your account so only you can see them.</p><Link className="button" to="/account">Sign in or register</Link></div></section>;
 
   if (cart.length === 0) return <section><div className="empty-state"><h1>Your cart is empty</h1><Link className="button" to="/">Browse products</Link></div></section>;
 
