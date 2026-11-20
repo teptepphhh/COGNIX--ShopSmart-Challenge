@@ -323,3 +323,12 @@ Confirm that the front end uses http://localhost:5173 and that `FRONTEND_URL=htt
 | `npm run db:studio` | Open the Prisma database viewer |
 
 Read `docs/TEACHING_ROADMAP.md` for the weekly improvement plan.
+
+## AWS hosted release (individual task, 2026-11-20)
+
+- Live site: https://18-140-130-174.sslip.io (fictional data, simulated checkout)
+- Architecture: one EC2 instance in ap-southeast-1 running Nginx (HTTPS), Express (127.0.0.1:3000) and PostgreSQL (127.0.0.1:5432). See `release-evidence/04b-deployment-diagram-aws.png` and `release-evidence/23-decision-record.md`.
+- Deployment files: `deploy/ec2-user-data.sh` (first setup), `deploy/update.sh` (backup, pull, `prisma migrate deploy`, build, restart), `deploy/nginx-shopsmart.conf`, `deploy/shopsmart-api.service`.
+- Production settings (server only, never committed): `DATABASE_URL`, `HOST=127.0.0.1`, `FRONTEND_URL`, `TRUST_PROXY=1`, `COOKIE_SECURE=true`, optional `GEMINI_API_KEY`. The frontend is built with `VITE_API_URL=/api`.
+- Apply schema changes with `npm run db:deploy` (`prisma migrate deploy`). Never run `db:seed` on a database with orders.
+- Release note: `release-evidence/RELEASE_NOTE_AWS.md`.

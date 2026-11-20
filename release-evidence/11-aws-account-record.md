@@ -8,7 +8,7 @@
 |---|---|---|---|
 | Sign-up path | Sign up for AWS (advanced) | Gives Region choice, full EC2 networking (security groups), IAM and Billing and Cost Management. The "new" sign-up uses preconfigured Regions and limited networking. | – |
 | Account plan | **Free plan** | No charges during the demo. Limited to select services. The account closes when the free period ends or credits run out, unless upgraded. | `screenshots/12-aws-plan-credits.png` |
-| Credits | US$100.00 available, US$0.00 used (AWS Free Tier credit, issued 2026-11-20, credit expiry 2027-11-20) | Every running resource uses credits, even with no visitors. | `screenshots/12-aws-plan-credits.png` |
+| Credits | At sign-up: US$100.00. After deployment (2026-11-20 17:24): **US$120.00** available (US$100 AWS Free Tier + US$20 earned for setting up AWS Budgets), US$0.00 used. AWS updates estimated usage about every 24 hours, so the EC2 hours of today will appear later. Credit expiry 2027-11-20. | Every running resource uses credits, even with no visitors. | `screenshots/12-aws-plan-credits.png`, `screenshots/25-credits-after-deploy.png` |
 | Free plan end | **2027-05-20** (182 days) or when credits are used up, whichever comes first | The demo and cleanup must finish well before this date. | Console "Free plan status" panel |
 | Root user MFA | Enabled (virtual authenticator app, `revano-phone`) | Protects the account owner sign-in. Root credentials are not shared. | `screenshots/11-aws-root-mfa.png` |
 | Access keys | None created | No long-term keys that could leak into the repo or screenshots. | `screenshots/11-aws-root-mfa.png` |
