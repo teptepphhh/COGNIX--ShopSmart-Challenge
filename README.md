@@ -318,8 +318,19 @@ Confirm that the front end uses http://localhost:5173 and that `FRONTEND_URL=htt
 | `npm run dev` | Run front end and API |
 | `npm run check` | Lint, test and build |
 | `npm run db:generate` | Generate Prisma Client |
-| `npm run db:migrate` | Create or update database tables |
+| `npm run db:migrate` | Create or update database tables (development) |
+| `npm run db:deploy` | Apply committed migrations (staging/production) |
 | `npm run db:seed` | Reset and insert sample data |
 | `npm run db:studio` | Open the Prisma database viewer |
 
 Read `docs/TEACHING_ROADMAP.md` for the weekly improvement plan.
+
+## Customer accounts and orders
+
+Checkout requires a customer account. Select **Sign in** to create a fictional test account, then place a simulated order and open **My orders**. The API only returns orders that belong to the signed-in customer.
+
+After pulling this version, run `npm run db:migrate` once to add the `User` table and the order owner column. Existing orders are kept.
+
+## Deployment
+
+The hosted release runs on one AWS EC2 instance (Nginx + Express + PostgreSQL). See [docs/deployment/README.md](docs/deployment/README.md) for the runbook, decision record, verification plan, resource register and release note.

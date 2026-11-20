@@ -1,0 +1,49 @@
+{
+  "url": "https://3-104-192-31.sslip.io",
+  "collected": "2026-11-20 Asia/Manila, browser fetch from the hosted origin",
+  "note": "Fictional test customers only. Passwords and session cookies are not recorded.",
+  "health": { "status": 200, "body": { "status": "ok", "database": "ok" } },
+  "products": {
+    "status": 200,
+    "count": 6,
+    "items": [
+      "1:Wireless Mouse:₱650:stock 12",
+      "2:Compact Mechanical Keyboard:₱1850:stock 8",
+      "3:USB-C Study Lamp:₱900:stock 10",
+      "4:1080p Webcam:₱1450:stock 6",
+      "5:Laptop Stand:₱1200:stock 9",
+      "6:USB Headset:₱1350:stock 7"
+    ]
+  },
+  "search_keyboard": ["Compact Mechanical Keyboard"],
+  "guest_GET_orders": { "status": 401, "code": "AUTH_REQUIRED" },
+  "guest_POST_order": { "status": 401 },
+  "register_customer_A": { "status": 201, "userId": 1 },
+  "customer_A_order": { "status": 201, "orderId": 1, "total": 650, "userId": 1 },
+  "customer_A_GET_own_order": { "status": 200 },
+  "customer_A_order_list": [1],
+  "quantity_0": { "status": 422, "code": "INVALID_ORDER", "detail": "Too small: expected number to be >=1" },
+  "quantity_20_excess": { "status": 409, "code": "INSUFFICIENT_STOCK", "message": "Only 11 unit(s) of Wireless Mouse are available." },
+  "stock_after_valid_order": "11 (before 12)",
+  "logout_A": { "status": 204 },
+  "register_customer_B": { "status": 201 },
+  "customer_B_GET_order_1": { "status": 404, "code": "ORDER_NOT_FOUND" },
+  "customer_B_order_list_length": 0,
+  "wrong_password": { "status": 401, "code": "INVALID_CREDENTIALS" },
+  "assistant_match": {
+    "status": 200,
+    "question": "Which keyboard is below ₱2,000?",
+    "answer": "Based on the current catalog, this in-stock option matches: Compact Mechanical Keyboard at ₱1,850.",
+    "recommendedProductIds": [2],
+    "sourceIds": [2],
+    "answerMode": "fallback"
+  },
+  "assistant_no_match": {
+    "question": "Do you sell refrigerators?",
+    "answer": "I could not find an in-stock product matching that request.",
+    "recommendedProducts": [],
+    "answerMode": "no_match"
+  },
+  "assistant_invalid": { "question": "hi", "status": 422, "code": "INVALID_QUESTION" },
+  "session_cookie_readable_by_page_javascript": false
+}

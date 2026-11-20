@@ -1,0 +1,42 @@
+# ShopSmart server-side checks, 2026-11-20 (Asia/Manila), host shopsmart-demo (ap-southeast-2)
+# Collected over EC2 Instance Connect. Session cookie value redacted. No secrets in this file.
+
+== commit: b0a07b5 + working-tree changes from changes.tgz
+== after restart: active=active enabled=enabled health={"status":"ok","database":"ok"}
+== listening sockets:
+127.0.0.53%lo:53 "systemd-resolve"
+0.0.0.0:22 "sshd"
+0.0.0.0:80 "nginx"
+0.0.0.0:443 "nginx"
+127.0.0.1:3000 "node"
+127.0.0.54:53 "systemd-resolve"
+127.0.0.1:5432 "postgres"
+[::]:22 "sshd"
+[::]:80 "nginx"
+[::]:443 "nginx"
+== login response headers (failed login):
+HTTP/1.1 401 Unauthorized
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Content-Type-Options: nosniff
+== set-cookie on register:
+HTTP/1.1 201 Created
+Set-Cookie: shopsmart_session=<redacted>; Max-Age=28800; Path=/; Expires=Fri, 20 Nov 2026 14:15:35 GMT; HttpOnly; Secure; SameSite=Lax
+== secret strings in published frontend: 0 file(s)
+== git-tracked .env files: 0
+== backend.env perms: 600 ubuntu
+== recent API log lines:
+SIGTERM received. Closing ShopSmart API.
+shopsmart-api.service: Deactivated successfully.
+Stopped shopsmart-api.service - ShopSmart Express API.
+Started shopsmart-api.service - ShopSmart Express API.
+ShopSmart API listening on 127.0.0.1:3000 (production)
+c4b8bb9e-f880-46c4-bda3-f7c2bd79a5f2 GET /api/health 200 82.873 ms
+bf3468d9-7c85-47f5-a6b5-772be3483c2c POST /api/auth/login 401 9.423 ms
+64faa78e-e603-4570-ae4a-c97ef7551c5d POST /api/auth/register 201 61.306 ms
+== certificate: Expiry Date: 2027-02-18 05:12:55+00:00 (VALID: 89 days)
+== disk: 5.3G used of 19G
+
+== reboot test
+$ sudo reboot            -> "The system will reboot now!" (see 07-reboot-command.jpg)
+~40 s later: GET https://3-104-192-31.sslip.io/api/health -> 200 {"status":"ok","database":"ok"}
+GET /api/products/1 -> stock 11 (same as before reboot: data persisted in PostgreSQL)

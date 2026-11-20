@@ -1,0 +1,57 @@
+# ShopSmart first deployment log, 2026-11-20, shopsmart-demo (ap-southeast-2)
+# Commands: 01-server-setup.sh -> 02-release.sh -> 04-seed-catalog-once.sh -> certbot --nginx
+# apt progress lines removed for length. No secrets are printed by these scripts.
+
+==> Installing system packages
+nginx is already the newest version (1.24.0-2ubuntu7.21).
+postgresql is already the newest version (16+257build1.1).
+git is already the newest version (1:2.43.0-1ubuntu7.4).
+curl is already the newest version (8.5.0-2ubuntu10.16).
+rsync is already the newest version (3.2.7-1ubuntu1.5).
+certbot is already the newest version (2.9.0-1).
+python3-certbot-nginx is already the newest version (2.9.0-1).
+==> Installing Node.js 22 LTS
+==> Adding a 2 GB swap file (helps npm and Vite on small instances)
+==> Creating the PostgreSQL user and database (localhost only)
+==> Writing server-only settings to /etc/shopsmart/backend.env (readable by ubuntu only)
+==> Installing the Nginx site
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+==> Installing the API service
+Setup complete.
+==> Updating code
+Already up to date.
+    Release commit: b0a07b5
+==> Installing dependencies exactly as locked
+added 324 packages, and audited 327 packages in 17s
+18 vulnerabilities (4 moderate, 9 high, 5 critical)
+==> Generating Prisma Client
+✔ Generated Prisma Client (v6.19.3) to ./../node_modules/@prisma/client in 122ms
+==> Applying committed migrations (prisma migrate deploy; never the seed script)
+Datasource "db": PostgreSQL database "shopsmart", schema "public" at "localhost:5432"
+2 migrations found in prisma/migrations
+Applying migration `20260910094640_initial_schema`
+Applying migration `20261120060000_add_users_and_order_owner`
+All migrations have been successfully applied.
+==> Building the frontend with a same-origin API URL
+vite v7.3.6 building client environment for production...
+✓ 56 modules transformed.
+dist/index.html                   0.49 kB │ gzip:  0.30 kB
+dist/assets/index-DGpO74lK.css    4.81 kB │ gzip:  1.61 kB
+dist/assets/index-DT8ZGb8j.js   280.83 kB │ gzip: 88.24 kB
+✓ built in 2.60s
+==> Publishing the frontend
+==> Restarting the API
+{"status":"ok","database":"ok"}
+Release complete.
+> prisma db seed
+Running seed command `node prisma/seed.js` ...
+Seeded 6 ShopSmart products.
+Account registered.
+Requesting a certificate for 3-104-192-31.sslip.io
+Successfully received certificate.
+This certificate expires on 2027-02-18.
+Certbot has set up a scheduled task to automatically renew this certificate in the background.
+Successfully deployed certificate for 3-104-192-31.sslip.io to /etc/nginx/sites-enabled/shopsmart
+Congratulations! You have successfully enabled HTTPS on https://3-104-192-31.sslip.io
+EXIT=0

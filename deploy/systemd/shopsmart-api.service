@@ -1,0 +1,19 @@
+[Unit]
+Description=ShopSmart Express API
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/shopsmart/backend
+# Server-only secrets live here (chmod 600), never in the repository.
+EnvironmentFile=/etc/shopsmart/backend.env
+ExecStart=/usr/bin/node src/server.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
