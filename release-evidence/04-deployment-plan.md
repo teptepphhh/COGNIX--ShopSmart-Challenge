@@ -1,3 +1,5 @@
+> **Superseded (2026-11-20):** ShopSmart is now deployed on AWS. See `04c-deployment-plan-aws.md`, `RELEASE_NOTE_AWS.md` and https://18-140-130-174.sslip.io. This file is kept as the earlier plan.
+
 # Activity 4 – Deployment Plan
 
 **Prepared by:** Stephanie Joy Revano (solo project)

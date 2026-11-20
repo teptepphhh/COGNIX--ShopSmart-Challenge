@@ -12,6 +12,7 @@
 | Free plan end | **2027-05-20** (182 days) or when credits are used up, whichever comes first | The demo and cleanup must finish well before this date. | Console "Free plan status" panel |
 | Root user MFA | Enabled (virtual authenticator app, `revano-phone`) | Protects the account owner sign-in. Root credentials are not shared. | `screenshots/11-aws-root-mfa.png` |
 | Access keys | None created | No long-term keys that could leak into the repo or screenshots. | `screenshots/11-aws-root-mfa.png` |
+| Daily AWS access | Root user with MFA (individual task, one person). No IAM users or access keys were created and root credentials are not shared. For a team or a longer project: create an IAM Identity Center user with only the EC2/Billing permissions needed and stop using root. | Least privilege; root should not be the everyday identity. | – |
 | Organizations | Not joined | Joining AWS Organizations would automatically upgrade a Free plan account to Paid. | – |
 | Cost alert | AWS Budgets **Zero spend budget** `shopsmart-zero-spend`, all services, email alert when spend exceeds US$0.01. Status OK / Healthy, US$0.00 used. | Early warning if any resource starts to cost money. | `screenshots/12b-aws-zero-spend-budget.png` |
 | Region | Asia Pacific (Singapore) `ap-southeast-1` (to be used for all resources) | Closest to the Philippines. One Region keeps cleanup simple. | Resource register |

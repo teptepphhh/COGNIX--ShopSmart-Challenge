@@ -1,0 +1,1258 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>ShopSmart PDC50 AWS Deployment – Revano</title><style>@page { size: A4; margin: 16mm 14mm 16mm 14mm; }
+body { font-family: "Segoe UI", Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1e293b; }
+h1 { font-size: 20pt; color: #0f172a; border-bottom: 2px solid #0f766e; padding-bottom: 4px; margin: 0 0 12px; break-before: page; }
+h2 { font-size: 14pt; color: #0f172a; margin: 18px 0 8px; break-after: avoid; }
+h3 { font-size: 12pt; color: #0f766e; margin: 14px 0 6px; break-after: avoid; }
+h4, h5, h6 { font-size: 11pt; margin: 12px 0 6px; break-after: avoid; }
+p { margin: 6px 0; }
+table { width: 100%; border-collapse: collapse; margin: 8px 0 10px; font-size: 9pt; }
+th, td { border: 1px solid #cbd5e1; padding: 4px 6px; vertical-align: top; text-align: left; overflow-wrap: break-word; hyphens: manual; }
+td:first-child, th:first-child { min-width: 18mm; }
+th { background: #f1f5f9; }
+tr { break-inside: avoid; }
+code { font-family: Consolas, monospace; font-size: 8.8pt; background: #f1f5f9; padding: 0 2px; border-radius: 3px; overflow-wrap: anywhere; }
+pre { font-family: Consolas, monospace; font-size: 8pt; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+blockquote { margin: 8px 0; padding: 6px 10px; border-left: 4px solid #0f766e; background: #f0fdfa; }
+figure { margin: 8px 0 14px; break-inside: avoid; text-align: center; }
+figure img { max-width: 100%; max-height: 120mm; border: 1px solid #cbd5e1; }
+figcaption { font-size: 9pt; color: #475569; margin-top: 4px; }
+figcaption .file { color: #94a3b8; }
+.title { break-after: page; text-align: center; padding-top: 45mm; }
+.title h1 { break-before: auto; border: 0; font-size: 26pt; }
+.title .sub { font-size: 14pt; color: #0f766e; margin-bottom: 22mm; }
+.title table { width: 85%; margin: 0 auto; font-size: 10.5pt; }
+.title th { width: 22%; white-space: nowrap; }
+.toc { break-after: page; }
+.toc h1 { break-before: auto; }
+.toc ol { font-size: 12pt; line-height: 2; }
+.toc a { color: #0f172a; text-decoration: none; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 10px; background: #dcfce7; color: #166534; font-weight: 700; }
+</style></head><body>
+<section class="title"><h1>ShopSmart AWS Deployment</h1><div class="sub">PDC50 – Individual ShopSmart Deployment Documentation</div>
+<table>
+<tr><th>Project</th><td>ShopSmart (React + Vite, Express, PostgreSQL with Prisma 6)</td></tr>
+<tr><th>Course</th><td>PDC50 Full Stack AI Application Development</td></tr>
+<tr><th>Student</th><td>Stephanie Joy Revano (individual)</td></tr>
+<tr><th>Site URL</th><td><b>https://18-140-130-174.sslip.io</b></td></tr>
+<tr><th>Repository</th><td>github.com/teptepphhh/COGNIX--ShopSmart-Challenge<br>branch <code>aws-deployment-revano</code></td></tr>
+<tr><th>Code version</th><td><code>446488d</code> (deployed and retested)</td></tr>
+<tr><th>AWS</th><td>Free plan · EC2 t3.micro · ap-southeast-1 (Singapore)</td></tr>
+<tr><th>Date</th><td>20 November 2026</td></tr>
+<tr><th>Status</th><td><span class="badge">Hosted release – 8/8 checks pass, 2 improvements retested</span></td></tr>
+</table></section>
+<section class="toc"><h1>Contents</h1><ol><li><a href="#summary">Summary</a></li><li><a href="#checklist">Submission checklist</a></li><li><a href="#account">AWS account, cost and access</a></li><li><a href="#architecture">Architecture and decision record</a></li><li><a href="#plan">Deployment plan and resource register</a></li><li><a href="#local">Before deployment: local work</a></li><li><a href="#verify">Hosted verification (8 checks)</a></li><li><a href="#improve">Two improvements and retests</a></li><li><a href="#secrets">Secrets check</a></li><li><a href="#log">Deployment log</a></li><li><a href="#release">Release note</a></li></ol></section>
+<h1 id="summary">Summary</h1>
+<p>ShopSmart was deployed to AWS as a <b>hosted release</b> on one EC2 instance in Asia Pacific (Singapore). Nginx serves the React build over HTTPS and forwards <code>/api/</code> to the Express API, which listens only on <code>127.0.0.1:3000</code> and uses PostgreSQL on <code>127.0.0.1:5432</code>. Only ports 443 and 80 are public; SSH is limited to my IP.</p>
+<p>Before deploying, the starter was extended with what the guide requires: <b>customer sign-in</b> with a secure session cookie and <b>order ownership enforced by the API</b> (guest 401, owner 200, another customer 404). Schema changes were applied with committed Prisma migrations and <code>migrate deploy</code>, with a database backup before each one.</p>
+<p>All <b>8 hosted checks passed</b> in a fresh browser on the real URL. Two improvements were made and retested on the hosted site: <b>(1)</b> the assistant clearly labels <i>catalog-only mode</i> because no AI provider key is configured, and <b>(2)</b> checkout is <b>idempotent</b>, so a retried request no longer creates a duplicate order.</p>
+<table><tr><th>Item</th><th>Value</th></tr>
+<tr><td>Site URL</td><td>https://18-140-130-174.sslip.io</td></tr>
+<tr><td>Code version</td><td><code>446488d</code> (first deploy <code>0b1e671</code>, local baseline <code>f4a0e54</code>)</td></tr>
+<tr><td>AWS account plan</td><td>Free plan, US$120 credits available, US$0.00 used on 20 Nov 2026; free access ends 20 May 2027</td></tr>
+<tr><td>Region</td><td>ap-southeast-1 (Singapore)</td></tr>
+<tr><td>Services</td><td>EC2, EBS, security group, key pair, public IPv4, AWS Budgets</td></tr>
+<tr><td>Release type</td><td>Hosted (online), fictional data, simulated checkout</td></tr>
+<tr><td>Planned removal</td><td>27 Nov 2026</td></tr></table>
+<h1 id="checklist">Submission checklist</h1>
+<table><tr><th>Required by the guide</th><th>Where it is</th><th>Status</th></tr>
+<tr><td>Site URL</td><td>https://18-140-130-174.sslip.io</td><td>Done</td></tr>
+<tr><td>Updated project or repository</td><td>Branch <code>aws-deployment-revano</code> (code <code>446488d</code>)</td><td>Done</td></tr>
+<tr><td>Deployment diagram</td><td><code>release-evidence/04b-deployment-diagram-aws.png</code> (chapter 4)</td><td>Done</td></tr>
+<tr><td>Short decision record</td><td><code>release-evidence/23-decision-record.md</code> (chapter 4)</td><td>Done</td></tr>
+<tr><td>Redacted screenshots or logs</td><td><code>release-evidence/screenshots/</code>, <code>22-secrets-check.txt</code></td><td>Done</td></tr>
+<tr><td>Release note</td><td><code>release-evidence/RELEASE_NOTE_AWS.md</code> (chapter 11)</td><td>Done</td></tr>
+<tr><td>Account plan, service names, Region, tested URLs, code version, local or hosted</td><td>Release note, first table</td><td>Done</td></tr>
+<tr><td>Two improvements and retests</td><td><code>release-evidence/24-improvements-and-retests.md</code> (chapter 8)</td><td>Done</td></tr>
+<tr><td>Redacted plan and credit screenshot</td><td><code>12-aws-plan-credits.png</code>, <code>25-credits-after-deploy.png</code></td><td>Done</td></tr>
+<tr><td>Resource inventory with Region and owner; demo dates and removal plan</td><td><code>16-resource-register.md</code></td><td>Done</td></tr>
+<tr><td>Root MFA, no shared root credentials</td><td><code>11-aws-account-record.md</code>, <code>11-aws-root-mfa.png</code></td><td>Done</td></tr>
+<tr><td>Public vs internal ports and why</td><td><code>04c-deployment-plan-aws.md</code> section 2</td><td>Done</td></tr>
+<tr><td>Variable names and value class (no secrets)</td><td><code>04c-deployment-plan-aws.md</code> section 3</td><td>Done</td></tr>
+<tr><td>Migration history and data-preservation decision</td><td><code>04c-deployment-plan-aws.md</code> section 4</td><td>Done</td></tr>
+<tr><td>Expected result written before each check; failed cases kept</td><td><code>18-hosted-verification.md</code>, <code>26-deployment-log.md</code></td><td>Done</td></tr>
+<tr><td>Mock/fallback provider labelled in the interface</td><td>Improvement 1</td><td>Done</td></tr></table>
+<h1 id="account">AWS account, cost and access</h1><p><strong>Owner:</strong> Stephanie Joy Revano (individual task)
+<strong>Date created:</strong> 2026-11-20
+<strong>Approved by instructor:</strong> students create their own AWS Free plan account</p>
+<table>
+<thead>
+<tr>
+<th>Decision / fact</th>
+<th>Value</th>
+<th>Why it matters</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sign-up path</td>
+<td>Sign up for AWS (advanced)</td>
+<td>Gives Region choice, full EC2 networking (security groups), IAM and Billing and Cost Management. The "new" sign-up uses preconfigured Regions and limited networking.</td>
+<td>–</td>
+</tr>
+<tr>
+<td>Account plan</td>
+<td><strong>Free plan</strong></td>
+<td>No charges during the demo. Limited to select services. The account closes when the free period ends or credits run out, unless upgraded.</td>
+<td><code>screenshots/12-aws-plan-credits.png</code></td>
+</tr>
+<tr>
+<td>Credits</td>
+<td>At sign-up: US$100.00. After deployment (2026-11-20 17:24): <strong>US$120.00</strong> available (US$100 AWS Free Tier + US$20 earned for setting up AWS Budgets), US$0.00 used. AWS updates estimated usage about every 24 hours, so the EC2 hours of today will appear later. Credit expiry 2027-11-20.</td>
+<td>Every running resource uses credits, even with no visitors.</td>
+<td><code>screenshots/12-aws-plan-credits.png</code>, <code>screenshots/25-credits-after-deploy.png</code></td>
+</tr>
+<tr>
+<td>Free plan end</td>
+<td><strong>2027-05-20</strong> (182 days) or when credits are used up, whichever comes first</td>
+<td>The demo and cleanup must finish well before this date.</td>
+<td>Console "Free plan status" panel</td>
+</tr>
+<tr>
+<td>Root user MFA</td>
+<td>Enabled (virtual authenticator app, <code>revano-phone</code>)</td>
+<td>Protects the account owner sign-in. Root credentials are not shared.</td>
+<td><code>screenshots/11-aws-root-mfa.png</code></td>
+</tr>
+<tr>
+<td>Access keys</td>
+<td>None created</td>
+<td>No long-term keys that could leak into the repo or screenshots.</td>
+<td><code>screenshots/11-aws-root-mfa.png</code></td>
+</tr>
+<tr>
+<td>Daily AWS access</td>
+<td>Root user with MFA (individual task, one person). No IAM users or access keys were created and root credentials are not shared. For a team or a longer project: create an IAM Identity Center user with only the EC2/Billing permissions needed and stop using root.</td>
+<td>Least privilege; root should not be the everyday identity.</td>
+<td>–</td>
+</tr>
+<tr>
+<td>Organizations</td>
+<td>Not joined</td>
+<td>Joining AWS Organizations would automatically upgrade a Free plan account to Paid.</td>
+<td>–</td>
+</tr>
+<tr>
+<td>Cost alert</td>
+<td>AWS Budgets <strong>Zero spend budget</strong> <code>shopsmart-zero-spend</code>, all services, email alert when spend exceeds US$0.01. Status OK / Healthy, US$0.00 used.</td>
+<td>Early warning if any resource starts to cost money.</td>
+<td><code>screenshots/12b-aws-zero-spend-budget.png</code></td>
+</tr>
+<tr>
+<td>Region</td>
+<td>Asia Pacific (Singapore) <code>ap-southeast-1</code> (to be used for all resources)</td>
+<td>Closest to the Philippines. One Region keeps cleanup simple.</td>
+<td>Resource register</td>
+</tr>
+</tbody>
+</table>
+<p>Screenshots are redacted: account ID, canonical user ID, MFA ARN and credit ID are covered.</p><figure><img src="../release-evidence/screenshots/12-aws-plan-credits.png"><figcaption>Free plan credits at sign-up (account and credit IDs redacted) <span class="file">(12-aws-plan-credits.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/11-aws-root-mfa.png"><figcaption>Root user MFA assigned; no access keys (IDs redacted) <span class="file">(11-aws-root-mfa.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/12b-aws-zero-spend-budget.png"><figcaption>Zero-spend budget alert shopsmart-zero-spend <span class="file">(12b-aws-zero-spend-budget.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/25-credits-after-deploy.png"><figcaption>Credits after deployment: US$120 available, US$0.00 used <span class="file">(25-credits-after-deploy.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/17-ec2-instance-running.png"><figcaption>EC2 instance shopsmart-demo running, 3/3 checks, ap-southeast-1c <span class="file">(17-ec2-instance-running.png)</span></figcaption></figure>
+<h1 id="architecture">Architecture and decision record</h1><figure><img src="../release-evidence/04b-deployment-diagram-aws.png"><figcaption>Deployment diagram <span class="file">(04b-deployment-diagram-aws.png)</span></figcaption></figure><p><strong>Date:</strong> 2026-11-20 · <strong>Owner:</strong> Stephanie Joy Revano (individual) · <strong>Status:</strong> accepted and deployed (<code>446488d</code>)
+<strong>Diagram:</strong> <code>04b-deployment-diagram-aws.svg</code> / <code>.png</code></p>
+<h3>Context</h3>
+<ul>
+<li>Individual classroom demonstration due 2026-11-20, fictional customers and simulated checkout only.</li>
+<li>New AWS account on the <strong>Free plan</strong> (US$100 credits, free access ends 2027-05-20). Sign-up path: <em>advanced</em>, for Region choice and full EC2 networking.</li>
+<li>The app needs: HTTPS, customer sign-in with a secure cookie, server-enforced order ownership, PostgreSQL that survives restarts, and an assistant that never claims to be live AI when it is not.</li>
+</ul>
+<h3>Options considered</h3>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>For</th>
+<th>Against</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A. Single EC2 host</strong> (Nginx + Express + PostgreSQL)</td>
+<td>One resource to pay for and clean up. Frontend and API on <strong>one HTTPS origin</strong>, so no CORS, no mixed content, and the <code>Secure</code> <code>SameSite=Lax</code> session cookie works without cross-site settings. Free HTTPS with Let's Encrypt and an sslip.io hostname, no domain purchase.</td>
+<td>Single point of failure. I maintain the OS, Node process, database, backups, HTTPS and cleanup.</td>
+</tr>
+<tr>
+<td>B. Amplify + EC2 + RDS</td>
+<td>Clear separation of static frontend, API and managed database. RDS has automated backups.</td>
+<td>Three services and more credits. The API on EC2 still needs its own HTTPS endpoint, and Amplify on a different origin needs CORS with credentials and cross-site cookies. More to configure before a same-day deadline.</td>
+</tr>
+<tr>
+<td>C. Tested local release only</td>
+<td>No cost or account risk.</td>
+<td>Allowed by the guide only when hosting is unavailable. An eligible account was available.</td>
+</tr>
+</tbody>
+</table>
+<h3>Decision</h3>
+<p><strong>Option A: one EC2 instance in ap-southeast-1 (Singapore).</strong></p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Choice</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Instance</td>
+<td>t3.micro, Ubuntu Server 24.04 LTS (not Ubuntu Pro), 20 GiB gp3, 2 GiB swap</td>
+<td>Free-tier eligible size. Swap lets <code>npm ci</code> and the Vite build run in 1 GiB RAM. Pro would add a per-hour charge.</td>
+</tr>
+<tr>
+<td>Public entry</td>
+<td>Nginx on 443 (HTTPS) and 80 (redirect only)</td>
+<td>Only Nginx is public.</td>
+</tr>
+<tr>
+<td>API</td>
+<td>Express on <code>127.0.0.1:3000</code>, systemd <code>Restart=always</code>, enabled at boot</td>
+<td>Not reachable from the internet. Restarts on crash and after reboot.</td>
+</tr>
+<tr>
+<td>Database</td>
+<td>PostgreSQL 16 on <code>127.0.0.1:5432</code>, random password generated on the server</td>
+<td>The browser never connects to the database.</td>
+</tr>
+<tr>
+<td>Security group</td>
+<td>443 and 80 from anywhere, 22 from my IP only. 3000 and 5432 not opened</td>
+<td>Least exposure.</td>
+</tr>
+<tr>
+<td>Secrets</td>
+<td><code>/etc/shopsmart/backend.env</code>, root:shopsmart 640, not in git. <code>VITE_API_URL=/api</code> is the only browser setting</td>
+<td>No secret in the repository, the browser bundle or screenshots.</td>
+</tr>
+<tr>
+<td>Migrations</td>
+<td><code>prisma migrate deploy</code> only. <code>db:seed</code> ran once on the new empty database. <code>deploy/update.sh</code> takes a <code>pg_dump</code> before every update</td>
+<td>Never reset or reseed a database with orders.</td>
+</tr>
+<tr>
+<td>AI provider</td>
+<td>Not configured (no paid key). The UI labels this as <strong>catalog-only mode</strong></td>
+<td>The guide does not require a paid provider. A fallback must not look like a live AI answer.</td>
+</tr>
+<tr>
+<td>Customer identity</td>
+<td>ShopSmart sessions (scrypt hashes, hashed session tokens), separate from AWS IAM</td>
+<td>IAM controls AWS administration, not who may read an order.</td>
+</tr>
+</tbody>
+</table>
+<h3>Accepted risks and mitigations</h3>
+<table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Single point of failure</td>
+<td>systemd auto-restart; reboot tested (check 7); <code>pg_dump</code> before each update; option to take an EBS snapshot before the demo.</td>
+</tr>
+<tr>
+<td>Public IP changes if the instance is stopped and started</td>
+<td>Instance is left running until grading. The hostname is derived from the IP, so a stop/start would need a new certificate. An Elastic IP would fix this at extra cost.</td>
+</tr>
+<tr>
+<td>Let's Encrypt certificate expires in 90 days</td>
+<td>Longer than the demo period. Certbot installs a renewal timer.</td>
+</tr>
+<tr>
+<td>Credits consumed while idle</td>
+<td>Zero-spend budget alert, resource register with removal date 2026-11-27, removal plan.</td>
+</tr>
+</tbody>
+</table>
+<h3>What would change for a real production release</h3>
+<p>Move PostgreSQL to a private RDS instance with automated backups; put the frontend on Amplify or S3 + CloudFront; use an owned domain and an Elastic IP or load balancer; add a real AI provider key through a secrets manager; add monitoring alarms; replace SSH with Session Manager.</p>
+<h1 id="plan">Deployment plan and resource register</h1><p><strong>Prepared by:</strong> Stephanie Joy Revano (individual) · <strong>Date:</strong> 2026-11-20 · <strong>Replaces:</strong> the platform-neutral plan in <code>04-deployment-plan.md</code>
+<strong>Diagram:</strong> <code>04b-deployment-diagram-aws.png</code> · <strong>Decision record:</strong> <code>23-decision-record.md</code></p>
+<h3>1. Where each part runs</h3>
+<table>
+<thead>
+<tr>
+<th>Part</th>
+<th>AWS location</th>
+<th>Address</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Browser and frontend</td>
+<td>Vite build (<code>frontend/dist</code>) served by Nginx on the EC2 instance</td>
+<td>https://18-140-130-174.sslip.io</td>
+</tr>
+<tr>
+<td>Express API</td>
+<td>Node.js 22 process on the same EC2 instance, systemd service <code>shopsmart-api</code></td>
+<td>internal <code>127.0.0.1:3000</code>, public through Nginx at <code>/api/</code></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>PostgreSQL 16 on the same EC2 instance (brief demo)</td>
+<td>internal <code>127.0.0.1:5432</code></td>
+</tr>
+<tr>
+<td>AI provider</td>
+<td>Not configured. Catalog-only mode, labelled in the UI</td>
+<td>–</td>
+</tr>
+</tbody>
+</table>
+<h3>2. Ports: public, internal and why</h3>
+<table>
+<thead>
+<tr>
+<th>Port</th>
+<th>Open to</th>
+<th>Used by</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>443</td>
+<td>Anywhere</td>
+<td>Nginx (HTTPS)</td>
+<td>The only way customers reach the site. Sign-in passwords travel only over HTTPS.</td>
+</tr>
+<tr>
+<td>80</td>
+<td>Anywhere</td>
+<td>Nginx</td>
+<td>Redirects to HTTPS. Also used by Let's Encrypt to issue the certificate.</td>
+</tr>
+<tr>
+<td>22</td>
+<td>My IP only (/32)</td>
+<td>SSH administration</td>
+<td>Limited to a trusted source, key-based login only.</td>
+</tr>
+<tr>
+<td>3000</td>
+<td>Not open (bound to 127.0.0.1)</td>
+<td>Express API</td>
+<td>Internal; Nginx forwards <code>/api/</code> to it. Tested: <code>http://18.140.130.174:3000</code> times out.</td>
+</tr>
+<tr>
+<td>5432</td>
+<td>Not open (bound to 127.0.0.1)</td>
+<td>PostgreSQL</td>
+<td>The browser never connects to the database.</td>
+</tr>
+</tbody>
+</table>
+<h3>3. Configuration: variable names and value class (no secret values)</h3>
+<table>
+<thead>
+<tr>
+<th>Where</th>
+<th>Name</th>
+<th>Value class</th>
+<th>Value / source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Frontend build (public, in browser JS)</td>
+<td><code>VITE_API_URL</code></td>
+<td>Public</td>
+<td><code>/api</code> (same origin). Rebuild if it changes.</td>
+</tr>
+<tr>
+<td>API, <code>/etc/shopsmart/backend.env</code> (root:shopsmart 640)</td>
+<td><code>DATABASE_URL</code></td>
+<td><strong>Secret</strong></td>
+<td>Generated on the server at setup; random password; never printed, committed or screenshotted</td>
+</tr>
+<tr>
+<td>API</td>
+<td><code>HOST</code></td>
+<td>Public</td>
+<td><code>127.0.0.1</code> (keeps the API internal)</td>
+</tr>
+<tr>
+<td>API</td>
+<td><code>PORT</code></td>
+<td>Public</td>
+<td><code>3000</code></td>
+</tr>
+<tr>
+<td>API</td>
+<td><code>NODE_ENV</code></td>
+<td>Public</td>
+<td><code>production</code></td>
+</tr>
+<tr>
+<td>API</td>
+<td><code>FRONTEND_URL</code></td>
+<td>Public</td>
+<td><code>https://18-140-130-174.sslip.io</code> (exact CORS origin)</td>
+</tr>
+<tr>
+<td>API</td>
+<td><code>TRUST_PROXY</code></td>
+<td>Public</td>
+<td><code>1</code> (read client IP and HTTPS from Nginx)</td>
+</tr>
+<tr>
+<td>API</td>
+<td><code>COOKIE_SECURE</code></td>
+<td>Public</td>
+<td><code>true</code> (session cookie only over HTTPS)</td>
+</tr>
+<tr>
+<td>API</td>
+<td><code>GEMINI_API_KEY</code></td>
+<td><strong>Secret</strong></td>
+<td>Empty on purpose (catalog-only mode). If added later: server only, never <code>VITE_</code></td>
+</tr>
+<tr>
+<td>EC2 key pair</td>
+<td><code>shopsmart-key.pem</code></td>
+<td><strong>Secret</strong></td>
+<td>Only on my laptop in <code>%USERPROFILE%\.ssh</code></td>
+</tr>
+</tbody>
+</table>
+<h3>4. Migration history and data-preservation decision</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Migration</th>
+<th>Created</th>
+<th>What it does</th>
+<th>Data effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>20260910094640_initial_schema</code></td>
+<td>2026-09-10 (starter)</td>
+<td>Product, Order, OrderItem</td>
+<td>–</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>20261120090000_add_users_sessions_order_owner</code></td>
+<td>2026-11-20</td>
+<td>User, Session, optional <code>Order.userId</code></td>
+<td>Adds only. Old orders keep <code>userId = NULL</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>20261120170000_order_idempotency_key</code></td>
+<td>2026-11-20</td>
+<td>Optional <code>Order.idempotencyKey</code>, unique <code>(userId, idempotencyKey)</code></td>
+<td>Adds only. Old orders keep NULL (allowed by the unique index)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Decision:</strong>
+- Release environments use <strong><code>prisma migrate deploy</code> only</strong>. <code>migrate dev</code>, <code>migrate reset</code> and <code>db push</code> are not used on AWS.
+- <code>db:seed</code> deletes orders, so it ran <strong>once</strong>, on the brand-new empty AWS database during first setup (<code>deploy/ec2-user-data.sh</code> only seeds on first install). It never runs again.
+- A <code>pg_dump</code> backup is taken <strong>before every migration</strong>: locally <code>backups/before-auth-migration.dump</code>; on AWS <code>deploy/update.sh</code> writes <code>/var/backups/shopsmart/before-update-&lt;time&gt;.dump</code> (first one: <code>before-update-20261120-091641.dump</code>).
+- Evidence: local <code>screenshots/13-migration-deploy.png</code>, <code>13-migration-status-diff.png</code>, <code>19-local-migration-idempotency.png</code>; AWS <code>20-deploy-update-446488d.png</code>, <code>20-backup-before-update-and-version.png</code>.</p>
+<h3>5. Order of steps used</h3>
+<ol>
+<li>Local: baseline check, sign-in and ownership code, migration with backup, <code>npm run check</code>, manual tests (<code>15-auth-ownership-test.md</code>).</li>
+<li>AWS account: Free plan, root MFA, zero-spend budget, Region Singapore (<code>11-aws-account-record.md</code>).</li>
+<li>Push the tested branch, launch EC2 with <code>deploy/ec2-user-data.sh</code> (installs Node 22, PostgreSQL, Nginx, Certbot; creates the database and <code>backend.env</code>; <code>npm ci</code>; <code>migrate deploy</code>; first seed; build with <code>VITE_API_URL=/api</code>; systemd service; Nginx; HTTPS).</li>
+<li>Hosted verification, 8 checks (<code>18-hosted-verification.md</code>).</li>
+<li>Improvements: local test → push → <code>sudo bash /opt/shopsmart/deploy/update.sh</code> → retest (<code>24-improvements-and-retests.md</code>).</li>
+</ol>
+<h3>6. Demo dates and removal plan</h3>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Date</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Deployed</td>
+<td>2026-11-20 16:31 (instance launch)</td>
+</tr>
+<tr>
+<td>Demonstration / submission</td>
+<td>2026-11-20 (deadline 23:59) and while the instructor grades</td>
+</tr>
+<tr>
+<td>Planned removal</td>
+<td><strong>2026-11-27</strong> (tag <code>RemoveBy</code> on the instance and volume)</td>
+</tr>
+<tr>
+<td>Removal steps</td>
+<td><code>16-resource-register.md</code> → "Removal plan"</td>
+</tr>
+</tbody>
+</table><h2>Resource register</h2><p><strong>Account owner:</strong> Stephanie Joy Revano (individual) · <strong>Plan:</strong> Free plan (ends 2027-05-20) · <strong>Region for all resources:</strong> Asia Pacific (Singapore) <code>ap-southeast-1</code>
+No credentials, passwords or account ID are recorded here.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Service</th>
+<th>Resource</th>
+<th>Region / AZ</th>
+<th>Owner</th>
+<th>Purpose</th>
+<th>Created</th>
+<th>Planned removal</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>EC2 instance</td>
+<td><code>shopsmart-demo</code> (<code>i-0833bb2383c00f026</code>), t3.micro, Ubuntu Server 24.04 LTS</td>
+<td>ap-southeast-1 / ap-southeast-1c</td>
+<td>Revano</td>
+<td>Runs Nginx (HTTPS, React build), Express API (127.0.0.1:3000) and PostgreSQL (127.0.0.1:5432)</td>
+<td>2026-11-20</td>
+<td>2026-11-27</td>
+<td>Running</td>
+</tr>
+<tr>
+<td>2</td>
+<td>EBS volume</td>
+<td>Root volume of <code>shopsmart-demo</code>, 20 GiB gp3 (tagged Project/Owner/RemoveBy)</td>
+<td>ap-southeast-1c</td>
+<td>Revano</td>
+<td>Operating system, code, PostgreSQL data</td>
+<td>2026-11-20</td>
+<td>2026-11-27 (deleted with the instance; check Volumes list)</td>
+<td>In use</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Public IPv4 address</td>
+<td>18.140.130.174 (auto-assigned, not an Elastic IP)</td>
+<td>ap-southeast-1</td>
+<td>Revano</td>
+<td>Public address; hostname <code>18-140-130-174.sslip.io</code></td>
+<td>2026-11-20</td>
+<td>Released when the instance is terminated</td>
+<td>In use</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Security group</td>
+<td><code>shopsmart-web-sg</code></td>
+<td>ap-southeast-1 (default VPC)</td>
+<td>Revano</td>
+<td>Inbound: 443 and 80 from anywhere, 22 from my IP only. 3000 and 5432 are not open.</td>
+<td>2026-11-20</td>
+<td>2026-11-27 (after the instance)</td>
+<td>In use</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Key pair</td>
+<td><code>shopsmart-key</code> (ED25519). Private key kept only on my laptop in <code>%USERPROFILE%\.ssh</code>, never in the repo</td>
+<td>ap-southeast-1</td>
+<td>Revano</td>
+<td>SSH administration</td>
+<td>2026-11-20</td>
+<td>2026-11-27</td>
+<td>Active</td>
+</tr>
+<tr>
+<td>6</td>
+<td>AWS Budgets</td>
+<td><code>shopsmart-zero-spend</code> (zero spend template, email alert above US$0.01)</td>
+<td>Global</td>
+<td>Revano</td>
+<td>Cost alert</td>
+<td>2026-11-20</td>
+<td>Keep until the account closes (no cost)</td>
+<td>Active</td>
+</tr>
+</tbody>
+</table>
+<p>Tags on the instance and volume: <code>Name=shopsmart-demo</code>, <code>Project=ShopSmart</code>, <code>Owner=Revano</code>, <code>RemoveBy=2026-11-27</code>.</p>
+<h4>Demo dates</h4>
+<ul>
+<li>Deployed: 2026-11-20 16:31 · Demonstrated and submitted: 2026-11-20 (deadline 23:59) · Kept running for grading until <strong>2026-11-27</strong>, then removed.</li>
+</ul>
+<h4>Cost notes</h4>
+<ul>
+<li>The instance, its public IPv4 address and the 20 GiB volume use credits every hour while they exist, even when nobody visits the site.</li>
+<li>Stopping the instance would change the public IP and therefore the sslip.io hostname and certificate. The instance is left running until the demo is graded, then terminated.</li>
+</ul>
+<h4>Removal plan (after grading, by 2026-11-27)</h4>
+<ol>
+<li>Take a final <code>pg_dump</code> from the server and download it if the data is needed (fictional data only).</li>
+<li>EC2 → Instances → <code>shopsmart-demo</code> → Instance state → <strong>Terminate</strong>.</li>
+<li>EC2 → Volumes: confirm no <code>Project=ShopSmart</code> volume remains. EC2 → Snapshots: delete any ShopSmart snapshot.</li>
+<li>EC2 → Security groups: delete <code>shopsmart-web-sg</code>. EC2 → Key pairs: delete <code>shopsmart-key</code>, and delete the local <code>.pem</code>.</li>
+<li>EC2 → Elastic IPs: confirm none are allocated.</li>
+<li>Billing → Credits and Bills: confirm credits stopped decreasing. Record the date in this table.</li>
+</ol>
+<h1 id="local">Before deployment: local work</h1><h2>Local baseline</h2><p><strong>Date:</strong> 2026-11-20
+<strong>Prepared by:</strong> Stephanie Joy Revano (individual)
+<strong>Branch / code version:</strong> <code>ASC_DEPLOYMENT_SHOPSMART_REVANO</code> @ <code>f4a0e54</code></p>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Expected</th>
+<th>Observed</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Node version</td>
+<td>&gt;= 20.19</td>
+<td>v22.20.0</td>
+<td>Pass</td>
+</tr>
+<tr>
+<td><code>npx prisma migrate status</code> (backend/)</td>
+<td>Schema up to date</td>
+<td>1 migration found, "Database schema is up to date!"</td>
+<td>Pass</td>
+</tr>
+<tr>
+<td><code>npm run check</code> – lint</td>
+<td>No errors</td>
+<td>Frontend and backend lint clean</td>
+<td>Pass</td>
+</tr>
+<tr>
+<td><code>npm run check</code> – tests</td>
+<td>All pass</td>
+<td>Frontend 15/15, backend 61/61</td>
+<td>Pass</td>
+</tr>
+<tr>
+<td><code>npm run check</code> – build</td>
+<td><code>frontend/dist</code> created</td>
+<td>index.html, CSS 5.18 kB, JS 275.07 kB</td>
+<td>Pass</td>
+</tr>
+<tr>
+<td>http://localhost:3000/api/health</td>
+<td><code>{"status":"ok","database":"ok"}</code></td>
+<td><code>{"status":"ok","database":"ok"}</code></td>
+<td>Pass</td>
+</tr>
+<tr>
+<td>http://localhost:5173</td>
+<td>Six products shown</td>
+<td>Six products shown (Study Lamp out of stock)</td>
+<td>Pass</td>
+</tr>
+</tbody>
+</table>
+<p>Note: Prisma prints a warning that <code>package.json#prisma</code> is deprecated in Prisma 7. This project uses Prisma 6, so it is a warning only.</p>
+<h4>Gaps found before deployment (against the AWS deployment guide)</h4>
+<ol>
+<li>No customer sign-in and no order ownership. The guide requires a fictional test customer to sign in, and the API to refuse a guest and a different customer when reading an order.</li>
+<li>Express does not set <code>trust proxy</code>, which is needed behind Nginx for the rate limiter and secure cookies.</li>
+<li>The frontend needs a same-origin API URL (<code>/api</code>) and an SPA rewrite on the web server.</li>
+</ol><h2>Sign-in and order ownership (local test)</h2><p><strong>Date:</strong> 2026-11-20
+<strong>Branch:</strong> <code>aws-deployment-revano</code> (based on <code>f4a0e54</code>; tested code committed as <code>49177c9</code>)
+<strong>Tested by:</strong> Stephanie Joy Revano (individual)
+<strong>Environment:</strong> local (Windows, Node 22.20.0, PostgreSQL 18), http://localhost:5173 and http://localhost:3000
+<strong>Data:</strong> fictional test customers only. Checkout is simulated.</p>
+<h4>Why this change was needed</h4>
+<p>The AWS deployment guide requires a fictional test customer to sign in and complete a simulated order, and the API to enforce access to private order records:
+"Guest is refused private data; owner succeeds; another customer is denied by direct API request."
+The starter had no sign-in and no way to read an order back (<code>orders.js</code> only had a <code>WEEK 4 IMPROVEMENT</code> comment).</p>
+<h4>What changed</h4>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Database</td>
+<td>Migration <code>20261120090000_add_users_sessions_order_owner</code>: new <code>User</code> and <code>Session</code> tables, optional <code>Order.userId</code>. Nothing is deleted. Old orders keep <code>userId = NULL</code>.</td>
+</tr>
+<tr>
+<td>Passwords</td>
+<td>Stored only as a scrypt hash with a random salt (<code>node:crypto</code>). Never logged or returned.</td>
+</tr>
+<tr>
+<td>Sessions</td>
+<td>Random token in an <code>httpOnly</code>, <code>SameSite=Lax</code> cookie. Only the SHA-256 hash of the token is stored. <code>Secure</code> is turned on with <code>COOKIE_SECURE=true</code> on HTTPS. 8-hour expiry.</td>
+</tr>
+<tr>
+<td>API</td>
+<td><code>POST /api/auth/register</code>, <code>POST /api/auth/login</code> (rate limited, same 401 for wrong password and unknown email), <code>POST /api/auth/logout</code>, <code>GET /api/auth/me</code>. All <code>/api/orders</code> routes require sign-in. The order owner comes from the session, never from the request body. <code>GET /api/orders/:id</code> filters by <code>id</code> <strong>and</strong> <code>userId</code> in the database query.</td>
+</tr>
+<tr>
+<td>Proxy</td>
+<td><code>TRUST_PROXY</code> setting so the rate limiter and secure cookies work behind Nginx.</td>
+</tr>
+<tr>
+<td>Frontend</td>
+<td>Sign in / Register page, My Orders, order details, Sign out. Checkout asks a guest to sign in and keeps the cart.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Why 404 and not 403 for another customer's order:</strong> a 403 would confirm that order #12 exists. A 404 gives the same answer as a missing order, so order numbers cannot be probed.</p>
+<p><strong>Identity note:</strong> this is ShopSmart customer identity. It is separate from AWS IAM, which only controls who may manage AWS resources.</p>
+<h4>Data-preservation steps</h4>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Command</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backup before migration</td>
+<td><code>pg_dump -F c -f backups\before-auth-migration.dump</code></td>
+<td>11,382-byte dump created (folder is in <code>.gitignore</code>)</td>
+</tr>
+<tr>
+<td>Status before</td>
+<td><code>npx prisma migrate status</code></td>
+<td>2 found, 1 not applied</td>
+</tr>
+<tr>
+<td>Apply</td>
+<td><code>npx prisma migrate deploy</code> (not <code>migrate dev</code>, not <code>db:seed</code>)</td>
+<td>"All migrations have been successfully applied."</td>
+</tr>
+<tr>
+<td>Status after</td>
+<td><code>npx prisma migrate status</code></td>
+<td>"Database schema is up to date!"</td>
+</tr>
+<tr>
+<td>Schema match</td>
+<td><code>npx prisma migrate diff --from-schema-datasource ... --to-schema-datamodel ... --script</code></td>
+<td>"-- This is an empty migration."</td>
+</tr>
+</tbody>
+</table>
+<p>Existing products and earlier orders (#1–#11) were kept.</p>
+<h4>Automated checks (<code>npm run check</code>)</h4>
+<p>Lint clean. Frontend 15/15. Backend 69/69 (61 earlier + 8 new in <code>test/auth.test.js</code>). Build OK.</p>
+<h4>Manual checks</h4>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Check</th>
+<th>Expected (written before running)</th>
+<th>Observed</th>
+<th>Result</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A1</td>
+<td>Register Ana Santos (ana.test@example.com)</td>
+<td>Account created, signed in, sent to My Orders</td>
+<td>Signed in, "No orders yet"</td>
+<td>Pass</td>
+<td><code>15-a1</code>, <code>15-a2</code></td>
+</tr>
+<tr>
+<td>A2</td>
+<td>Ana checks out 1 Wireless Mouse</td>
+<td>Name and email pre-filled, order saved with Ana as owner</td>
+<td>Order <strong>#12</strong>, ₱650.00</td>
+<td>Pass</td>
+<td><code>15-a3</code>–<code>15-a5</code></td>
+</tr>
+<tr>
+<td>A3</td>
+<td>Ana opens /orders/12</td>
+<td>Owner sees the order</td>
+<td>Order #12 details shown</td>
+<td>Pass</td>
+<td><code>15-a6</code></td>
+</tr>
+<tr>
+<td>G1</td>
+<td>Guest opens /orders/12 in the app</td>
+<td>Redirect to sign-in, order not shown</td>
+<td><code>/login?next=/orders/12</code></td>
+<td>Pass</td>
+<td><code>15-c</code></td>
+</tr>
+<tr>
+<td>G2</td>
+<td>Guest calls <code>GET http://localhost:3000/api/orders/12</code> directly</td>
+<td>401 <code>AUTH_REQUIRED</code></td>
+<td><code>{"error":{"code":"AUTH_REQUIRED",...}}</code></td>
+<td>Pass</td>
+<td><code>15-d</code></td>
+</tr>
+<tr>
+<td>B1</td>
+<td>Register Ben Reyes (ben.test@example.com)</td>
+<td>My Orders is empty (Ana's order not listed)</td>
+<td>"No orders yet"</td>
+<td>Pass</td>
+<td><code>15-e1</code>, <code>15-e2</code></td>
+</tr>
+<tr>
+<td>B2</td>
+<td>Ben opens /orders/12 in the app</td>
+<td>"Order could not be found."</td>
+<td>"Order could not be found."</td>
+<td>Pass</td>
+<td><code>15-f</code></td>
+</tr>
+<tr>
+<td>B3</td>
+<td>Ben calls <code>GET http://localhost:3000/api/orders/12</code> directly</td>
+<td>404 <code>ORDER_NOT_FOUND</code></td>
+<td><code>{"error":{"code":"ORDER_NOT_FOUND",...}}</code></td>
+<td>Pass</td>
+<td><code>15-g</code></td>
+</tr>
+</tbody>
+</table>
+<p>All screenshots are in <code>release-evidence/screenshots/</code>.</p><figure><img src="../release-evidence/screenshots/13-migration-deploy.png"><figcaption>Local: prisma migrate deploy applies the users/sessions/owner migration <span class="file">(13-migration-deploy.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/13-migration-status-diff.png"><figcaption>Local: schema up to date, empty diff <span class="file">(13-migration-status-diff.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/14-check-3-summary-build.png"><figcaption>Local: backend 69/69, build OK <span class="file">(14-check-3-summary-build.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/15-c-guest-redirected-to-login.png"><figcaption>Local: guest sent to sign-in <span class="file">(15-c-guest-redirected-to-login.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/15-d-guest-api-401.png"><figcaption>Local: guest API 401 <span class="file">(15-d-guest-api-401.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/15-g-ben-api-404.png"><figcaption>Local: other customer API 404 <span class="file">(15-g-ben-api-404.png)</span></figcaption></figure>
+<h1 id="verify">Hosted verification (8 checks)</h1><p><strong>Site URL:</strong> https://18-140-130-174.sslip.io
+<strong>Code version:</strong> checks 1–7 run on <code>0b1e671</code> (first deploy); improvements retested on <code>446488d</code> (see <code>24-improvements-and-retests.md</code>). Branch <code>aws-deployment-revano</code>.
+<strong>Host:</strong> EC2 <code>shopsmart-demo</code> (<code>i-0833bb2383c00f026</code>), t3.micro, Ubuntu 24.04, ap-southeast-1
+<strong>Tester:</strong> Stephanie Joy Revano · fresh browser window (Incognito) · fictional data only
+<strong>Expected results written:</strong> 2026-11-20 16:40 (before running any check)</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Check</th>
+<th>Expected observation (written first)</th>
+<th>Observed</th>
+<th>Result</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Frontend and direct route</td>
+<td>Home page loads over HTTPS with six products. Typing <code>/cart</code> and <code>/products/2</code> directly and pressing refresh still shows the app (no Nginx 404). <code>http://</code> redirects to <code>https://</code>.</td>
+<td>Home loads with products; <code>/products/2</code> (Keyboard ₱1,850) and <code>/cart</code> load after refresh; <code>http://</code> became <code>https://</code>; Chrome: "Connection is secure".</td>
+<td>Pass</td>
+<td><code>18-1a</code> … <code>18-1e</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>API connection</td>
+<td>DevTools Network shows <code>GET https://18-140-130-174.sslip.io/api/products</code> = 200 (same origin, no CORS or mixed-content error). <code>/api/health</code> = <code>{"status":"ok","database":"ok"}</code>. Port 3000 is not reachable from the internet.</td>
+<td>Request URL <code>https://18-140-130-174.sslip.io/api/products</code>, remote 18.140.130.174:443, 304 Not Modified (cached success), <code>Access-Control-Allow-Origin</code> = the site; health ok; <code>:3000</code> → ERR_CONNECTION_TIMED_OUT.</td>
+<td>Pass</td>
+<td><code>18-2a</code>, <code>18-2b</code>, <code>18-2c</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Catalog and cart</td>
+<td>Six products from PostgreSQL. Search "keyboard" shows only the keyboard. Quantity changes update the line total and cart total.</td>
+<td>Search shows only Compact Mechanical Keyboard. Mouse ×3 = ₱1,950, Laptop Stand ×1 = ₱1,200, 4 items, total ₱3,150.</td>
+<td>Pass</td>
+<td><code>18-3a</code>, <code>18-3b</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Account and order</td>
+<td>Guest: <code>GET /api/orders/&lt;id&gt;</code> = 401 <code>AUTH_REQUIRED</code>. Owner: order details shown. Another customer: direct API request = 404 <code>ORDER_NOT_FOUND</code>. Session cookie is <code>HttpOnly</code>, <code>Secure</code>, <code>SameSite=Lax</code>.</td>
+<td>Guest checkout asks to sign in (cart kept). Ana sees order #1. Guest <code>GET /api/orders/1</code> → AUTH_REQUIRED. Ben: app "Order could not be found.", API ORDER_NOT_FOUND. Cookie HttpOnly ✓ Secure ✓ SameSite Lax.</td>
+<td>Pass</td>
+<td><code>18-4a</code> … <code>18-4e2</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>Simulated checkout</td>
+<td>Valid fictional order is saved and appears in My Orders. Invalid email = 422 refused. Quantity above stock = 409 refused, stock unchanged.</td>
+<td>Direct API: invalid email → 422, 15 mice (stock 12) → 409. Valid order #1 ₱3,150 saved and shown at <code>/orders/1</code>; mouse stock 12 → 9.</td>
+<td>Pass</td>
+<td><code>18-5ab</code>, <code>18-5c1</code>–<code>18-5c3</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td>Assistant</td>
+<td>Recommended products and links match current catalog prices. A question with no match gets an honest "no match" answer. With no AI key on the server, answers use the catalog fallback and say so.</td>
+<td>Keyboard question → Compact Mechanical Keyboard ₱1,850 with source product #2 and fallback note; "drone" → "I could not find an in-stock ShopSmart product…". Log shows <code>fallback reason=NO_KEY</code>. Label improved in Improvement 1.</td>
+<td>Pass</td>
+<td><code>18-6a</code>, <code>18-6b</code>, <code>21-imp1</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td>Restart and logs</td>
+<td>After <code>systemctl restart shopsmart-api</code> and after a full instance reboot, the site and <code>/api/health</code> recover without manual steps. <code>journalctl -u shopsmart-api</code> shows request lines and errors with trace IDs but no password, <code>DATABASE_URL</code> or key.</td>
+<td>Restart → <code>active</code>, health ok. Ports: 443/80 on 0.0.0.0 (nginx), 3000 and 5432 on 127.0.0.1 only. Log shows requests, 404s, <code>fallback reason=NO_KEY</code>, SIGTERM/restart, no secrets. After <code>sudo reboot</code> health ok with no manual step.</td>
+<td>Pass</td>
+<td><code>18-7a</code>, <code>18-7b</code>, <code>18-7c</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td>Secrets and credits</td>
+<td>No secret in the git repository, in the built browser JavaScript, or in screenshots. Billing shows credits still within the Free plan.</td>
+<td>Repo: only <code>.env.example</code> placeholders, no keys or dumps (<code>22-secrets-check.txt</code>). <code>frontend/dist</code>: none found. Screenshots redacted. Credits: US$120.00 available, US$0.00 used (Free plan; estimates update about every 24 h).</td>
+<td>Pass</td>
+<td><code>22-secrets-check.txt</code>, <code>18-7a</code>, <code>25</code></td>
+</tr>
+</tbody>
+</table><h2>Evidence</h2><h3>Check 1 – Frontend and direct route</h3><figure><img src="../release-evidence/screenshots/18-1a-home-https.png"><figcaption>Home page in a fresh Incognito window <span class="file">(18-1a-home-https.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/18-1b-direct-route-products-2.png"><figcaption>Direct visit and refresh of /products/2 <span class="file">(18-1b-direct-route-products-2.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/18-1c-direct-route-cart.png"><figcaption>Direct visit and refresh of /cart <span class="file">(18-1c-direct-route-cart.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/18-1d-redirected-https.png"><figcaption>http:// redirected to https:// <span class="file">(18-1d-redirected-https.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/18-1e-connection-secure.png"><figcaption>Connection is secure <span class="file">(18-1e-connection-secure.png)</span></figcaption></figure><h3>Check 2 – API connection</h3><figure><img src="../release-evidence/screenshots/18-2a-network-api-products.png"><figcaption>Browser requests https://…/api/products, CORS origin is the site <span class="file">(18-2a-network-api-products.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/18-2b-health-https.png"><figcaption>/api/health checks the database <span class="file">(18-2b-health-https.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/18-2c-port-3000-blocked.png"><figcaption>Port 3000 not reachable from the internet <span class="file">(18-2c-port-3000-blocked.png)</span></figcaption></figure><h3>Check 3 – Catalog and cart</h3><figure><img src="../release-evidence/screenshots/18-3a-search-keyboard.png"><figcaption>Search &quot;keyboard&quot; <span class="file">(18-3a-search-keyboard.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/18-3b-cart-totals.png"><figcaption>Quantities and totals <span class="file">(18-3b-cart-totals.png)</span></figcaption></figure><h3>Check 4 – Account and order</h3><figure><img src="../release-evidence/screenshots/18-4a-guest-checkout-sign-in-required.png"><figcaption>Guest checkout asks to sign in, cart kept <span class="file">(18-4a-guest-checkout-sign-in-required.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/18-4b-ana-registered-checkout-prefilled.png"><figcaption>Ana registered, checkout pre-filled <span class="file">(18-4b-ana-registered-checkout-prefilled.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/18-4c-session-cookie-flags.png"><figcaption>Session cookie HttpOnly, Secure, SameSite=Lax (value redacted) <span class="file">(18-4c-session-cookie-flags.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/18-4d-guest-api-401.png"><figcaption>Guest direct API: AUTH_REQUIRED <span class="file">(18-4d-guest-api-401.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/18-4e1-ben-app-order-1-not-found.png"><figcaption>Ben (other customer) in the app: not found <span class="file">(18-4e1-ben-app-order-1-not-found.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/18-4e2-ben-api-order-1-404.png"><figcaption>Ben direct API: ORDER_NOT_FOUND <span class="file">(18-4e2-ben-api-order-1-404.png)</span></figcaption></figure><h3>Check 5 – Simulated checkout</h3><figure><img src="../release-evidence/screenshots/18-5ab-server-rejects-invalid-email-and-excess-stock.png"><figcaption>Server refuses invalid email (422) and excess quantity (409) <span class="file">(18-5ab-server-rejects-invalid-email-and-excess-stock.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/18-5c1-order-1-success.png"><figcaption>Valid order #1 saved <span class="file">(18-5c1-order-1-success.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/18-5c2-owner-order-1-details.png"><figcaption>Owner sees order #1 <span class="file">(18-5c2-owner-order-1-details.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/18-5c3-stock-after-order.png"><figcaption>Mouse stock 12 → 9 <span class="file">(18-5c3-stock-after-order.png)</span></figcaption></figure><h3>Check 6 – Assistant</h3><figure><img src="../release-evidence/screenshots/18-6a-assistant-keyboard-BEFORE-imp1.png"><figcaption>Grounded answer with source; fallback note <span class="file">(18-6a-assistant-keyboard-BEFORE-imp1.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/18-6b-assistant-no-match.png"><figcaption>Honest no-match answer <span class="file">(18-6b-assistant-no-match.png)</span></figcaption></figure><h3>Check 7 – Restart and logs</h3><figure><img src="../release-evidence/screenshots/18-7a-restart-ports-logs-secrets.png"><figcaption>Restart, listening ports, API log, secrets scan of the browser build <span class="file">(18-7a-restart-ports-logs-secrets.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/18-7b-reboot-command.png"><figcaption>Full instance reboot <span class="file">(18-7b-reboot-command.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/18-7c-health-after-reboot.png"><figcaption>Health ok after reboot with no manual step <span class="file">(18-7c-health-after-reboot.png)</span></figcaption></figure>
+<h1 id="improve">Two improvements and retests</h1><p>Both improvements came from problems seen in the earlier releases and in the hosted checks. The <strong>BEFORE</strong> evidence was taken on the hosted site at code <code>0b1e671</code>. The fix was committed as <code>446488d</code>, tested locally (<code>npm run check</code>: backend 76/76, frontend 15/15, build OK), deployed with <code>deploy/update.sh</code> (database backup first, <code>prisma migrate deploy</code>), and <strong>retested on the same hosted URL</strong>.</p>
+<h3>Improvement 1 – Label catalog-only assistant answers</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Problem</td>
+<td>The hosted server has no AI provider key, so every answer is a catalog fallback. The page still said "GROUNDED AI ASSISTANT" and "the AI answers…". Only a small note at the end of each answer hinted that no AI was used. The guide: <em>"If you use a mock provider, label it in the interface and report so the instructor can distinguish a simulated provider failure from a live call."</em></td>
+</tr>
+<tr>
+<td>Change</td>
+<td><code>GET /api/assistant/status</code> returns <code>{"mode":"catalog-only"}</code> or <code>{"mode":"live-ai"}</code>, and every answer includes <code>mode</code>. The page shows a clear badge: <strong>"Catalog-only mode (no live AI)…"</strong> (or "Live AI provider connected…"). Heading changed to "GROUNDED PRODUCT ASSISTANT".</td>
+</tr>
+<tr>
+<td>Files</td>
+<td><code>backend/src/routes/assistant.js</code>, <code>frontend/src/pages/AssistantPage.jsx</code>, <code>frontend/src/services/api.js</code>, <code>frontend/src/styles.css</code>, test <code>backend/test/assistantMode.test.js</code> (2 tests)</td>
+</tr>
+<tr>
+<td>Expected after (written before retest)</td>
+<td>Same question gives the same grounded product, and the badge is visible above the form.</td>
+</tr>
+<tr>
+<td>BEFORE</td>
+<td><code>screenshots/18-6a-assistant-keyboard-BEFORE-imp1.png</code> – no label, "GROUNDED AI ASSISTANT"</td>
+</tr>
+<tr>
+<td>AFTER</td>
+<td><code>screenshots/21-imp1-AFTER-catalog-only-badge.png</code> – badge shown, Keyboard ₱1,850 with source #2</td>
+</tr>
+<tr>
+<td>Result</td>
+<td><strong>Pass</strong></td>
+</tr>
+</tbody>
+</table>
+<h3>Improvement 2 – Idempotent checkout (no duplicate order on retry)</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Problem</td>
+<td>Known limitation from the local release note: a checkout that times out in the browser and is retried could create a second order and decrement stock twice.</td>
+</tr>
+<tr>
+<td>Change</td>
+<td>The browser sends an <code>Idempotency-Key</code> per cart. The API stores it on the order with a unique <code>(userId, idempotencyKey)</code> index (migration <code>20261120170000_order_idempotency_key</code>, existing orders keep NULL). A repeat with the same key returns the first order with <strong>200</strong> and <code>Idempotent-Replayed: true</code>. Two simultaneous requests: the unique index lets only one transaction commit; the other is rolled back, stock included.</td>
+</tr>
+<tr>
+<td>Files</td>
+<td><code>backend/prisma/schema.prisma</code>, migration, <code>backend/src/routes/orders.js</code>, <code>frontend/src/pages/CheckoutPage.jsx</code>, <code>frontend/src/services/api.js</code>, test <code>backend/test/idempotency.test.js</code> (5 tests)</td>
+</tr>
+<tr>
+<td>Expected after (written before retest)</td>
+<td>Attempt 1 = 201, attempt 2 with the same key = 200 with the same order id; USB Headset stock drops by 1 only.</td>
+</tr>
+<tr>
+<td>BEFORE (hosted, <code>0b1e671</code>)</td>
+<td>Same key twice → <strong>201 order #2</strong> and <strong>201 order #3</strong> (duplicate). <code>screenshots/19-imp2-BEFORE-duplicate-orders.png</code></td>
+</tr>
+<tr>
+<td>AFTER (hosted, <code>446488d</code>)</td>
+<td>Same key twice → <strong>201 order #4</strong>, then <strong>200 order #4, replayed: true</strong>. Headset stock 5 → 4. <code>screenshots/21-imp2-AFTER-no-duplicate.png</code>, <code>21-imp2-AFTER-headset-stock-4.png</code></td>
+</tr>
+<tr>
+<td>Result</td>
+<td><strong>Pass</strong></td>
+</tr>
+</tbody>
+</table>
+<h3>Deployment of the improvements</h3>
+<p><code>screenshots/20-deploy-update-446488d.png</code> and <code>20-backup-before-update-and-version.png</code>: backup <code>before-update-20261120-091641.dump</code> created first, migration applied, API <code>active</code>, health ok, server at <code>446488d</code>.</p><figure><img src="../release-evidence/screenshots/18-6a-assistant-keyboard-BEFORE-imp1.png"><figcaption>Improvement 1 BEFORE: &quot;GROUNDED AI ASSISTANT&quot;, no label <span class="file">(18-6a-assistant-keyboard-BEFORE-imp1.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/21-imp1-AFTER-catalog-only-badge.png"><figcaption>Improvement 1 AFTER: catalog-only badge <span class="file">(21-imp1-AFTER-catalog-only-badge.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/19-imp2-BEFORE-duplicate-orders.png"><figcaption>Improvement 2 BEFORE: same key → orders #2 and #3 <span class="file">(19-imp2-BEFORE-duplicate-orders.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/19-local-check-76-tests.png"><figcaption>Local check after the improvements: backend 76/76, build OK <span class="file">(19-local-check-76-tests.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/20-deploy-update-446488d.png"><figcaption>Deploy with update.sh: migration applied, health ok, 446488d <span class="file">(20-deploy-update-446488d.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/20-backup-before-update-and-version.png"><figcaption>Backup before the update; server at 446488d <span class="file">(20-backup-before-update-and-version.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/21-imp2-AFTER-no-duplicate.png"><figcaption>Improvement 2 AFTER: 201 then 200 with the same order #4 <span class="file">(21-imp2-AFTER-no-duplicate.png)</span></figcaption></figure><figure><img src="../release-evidence/screenshots/21-imp2-AFTER-headset-stock-4.png"><figcaption>Improvement 2 AFTER: headset stock decreased once (5 → 4) <span class="file">(21-imp2-AFTER-headset-stock-4.png)</span></figcaption></figure>
+<h1 id="secrets">Secrets check</h1><pre>ShopSmart AWS release - secrets check
+Date: 2026-11-20  Code version: 446488d (branch aws-deployment-revano)
+
+1) Repository (git ls-files / git grep for env files, keys, dumps and secret patterns)
+== tracked env files
+backend/.env.example
+frontend/.env.example
+== tracked key/dump files
+none
+== secret patterns in tracked files
+backend/.env.example:1  postgresql://shopsmart_user:shopsmart_dev@localhost  -&gt; README classroom default for a LOCAL dev database, not used on AWS
+deploy/ec2-user-data.sh:45  postgresql://shopsmart_app:${DB_PASS}@127.0.0.1  -&gt; shell variable; the real password is generated on the server and never printed
+docs/*.html, release-evidence/05-secrets-check.txt  -&gt; placeholders with **** only
+Result: no real password, AWS key, SSH key, Gemini key or database dump is committed.
+.gitignore covers .env, backups/, *.dump. The SSH key (.pem) is kept in %USERPROFILE%\.ssh, outside the repo.
+
+2) Browser build on the server
+sudo grep -rIl -E &quot;DATABASE_URL|postgresql://|GEMINI_API_KEY&quot; /opt/shopsmart/frontend/dist
+-&gt; none found in frontend/dist   (screenshot 18-7a)
+VITE_API_URL=/api is the only build-time setting, and it is public by design.
+
+3) Server-only settings
+/etc/shopsmart/backend.env  owner root:shopsmart, mode 640, not in git. Read only by the systemd service.
+
+4) Screenshots
+Account ID, canonical user ID, MFA ARN, credit ID and the session cookie value are covered in every screenshot.
+</pre>
+<h1 id="log">Deployment log</h1><p>All times are Philippine time (UTC+8), 2026-11-20. Failed cases are kept on purpose.</p>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Step</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>11:35</td>
+<td>Local baseline at <code>f4a0e54</code>: <code>npm run check</code>, health, products</td>
+<td>Pass (<code>10-pre-deploy-baseline.md</code>)</td>
+</tr>
+<tr>
+<td>12:30</td>
+<td>New branch for this task (renamed to <code>aws-deployment-revano</code> at 15:48)</td>
+<td>–</td>
+</tr>
+<tr>
+<td>15:20</td>
+<td>Local DB backup, <code>prisma migrate deploy</code> (users/sessions/owner)</td>
+<td>Pass</td>
+</tr>
+<tr>
+<td>15:30</td>
+<td><code>npm run check</code> backend 69/69, frontend 15/15</td>
+<td>Pass</td>
+</tr>
+<tr>
+<td>15:35–15:40</td>
+<td>Local manual tests: owner 200, guest 401, other customer 404</td>
+<td>Pass (<code>15-auth-ownership-test.md</code>)</td>
+</tr>
+<tr>
+<td>15:44</td>
+<td>Commit <code>49177c9</code> pushed</td>
+<td>–</td>
+</tr>
+<tr>
+<td>15:50–16:08</td>
+<td>AWS account (advanced sign-up, Free plan), root MFA, zero-spend budget</td>
+<td>Pass</td>
+</tr>
+<tr>
+<td>16:20</td>
+<td><strong>Problem:</strong> AMI defaulted to Amazon Linux, then "Ubuntu Pro 26.04" was selected</td>
+<td>Fixed: changed to <strong>Ubuntu Server 24.04 LTS</strong> (no Pro surcharge, version the script expects)</td>
+</tr>
+<tr>
+<td>16:24</td>
+<td><strong>Problem:</strong> security group had HTTPS twice (duplicate-rule error), no HTTP rule; storage 8 GiB</td>
+<td>Fixed: rule 3 changed to HTTP 80; storage set to 20 GiB gp3</td>
+</tr>
+<tr>
+<td>16:27</td>
+<td><strong>Problem caught before launch:</strong> deploy files staged but not committed; raw GitHub URL of the setup script returned <strong>404</strong></td>
+<td>Fixed: committed and pushed <code>0b1e671</code>, re-checked the URL returned 200 and LF line endings, then launched</td>
+</tr>
+<tr>
+<td>16:31</td>
+<td>Launch <code>i-0833bb2383c00f026</code>, user-data setup</td>
+<td>Running, 3/3 checks</td>
+</tr>
+<tr>
+<td>16:39</td>
+<td>Site up at https://18-140-130-174.sslip.io (certificate issued)</td>
+<td>Pass</td>
+</tr>
+<tr>
+<td>16:40</td>
+<td>Expected results written for the 8 hosted checks</td>
+<td>–</td>
+</tr>
+<tr>
+<td>16:41–17:05</td>
+<td>Hosted checks 1–6</td>
+<td>Pass (<code>18-hosted-verification.md</code>)</td>
+</tr>
+<tr>
+<td>17:01</td>
+<td>Improvement 2 BEFORE: same Idempotency-Key twice → orders #2 and #3 (duplicate)</td>
+<td>Fail recorded (<code>19-imp2-BEFORE-duplicate-orders.png</code>)</td>
+</tr>
+<tr>
+<td>17:04</td>
+<td>Improvement 1 BEFORE: no catalog-only label</td>
+<td>Recorded (<code>18-6a</code>)</td>
+</tr>
+<tr>
+<td>17:07</td>
+<td><strong>Problem:</strong> SSH <code>Permission denied (publickey)</code>; key file was still in Downloads; later commands ran in PowerShell instead of the server</td>
+<td>Fixed: moved key to <code>%USERPROFILE%\.ssh</code>, <code>icacls</code> to owner-read only, reconnected</td>
+</tr>
+<tr>
+<td>17:10</td>
+<td>Check 7: restart, ports, logs, secrets scan</td>
+<td>Pass</td>
+</tr>
+<tr>
+<td>17:11–17:14</td>
+<td>Full instance reboot; health ok with no manual step</td>
+<td>Pass</td>
+</tr>
+<tr>
+<td>17:12</td>
+<td>Improvements tested locally: backend 76/76, frontend 15/15</td>
+<td>Pass</td>
+</tr>
+<tr>
+<td>17:15</td>
+<td>Commit <code>446488d</code> pushed</td>
+<td>–</td>
+</tr>
+<tr>
+<td>17:16</td>
+<td><code>deploy/update.sh</code>: backup, pull, migrate deploy, build, restart</td>
+<td>Pass</td>
+</tr>
+<tr>
+<td>17:19–17:21</td>
+<td>Retests: catalog-only badge shown; same key → 201 then 200 same order #4; stock −1 only</td>
+<td>Pass (<code>24-improvements-and-retests.md</code>)</td>
+</tr>
+<tr>
+<td>17:24</td>
+<td>Credits US$120.00, US$0.00 used</td>
+<td>Pass</td>
+</tr>
+<tr>
+<td>17:26</td>
+<td>Evidence commit <code>e09a1e9</code> pushed</td>
+<td>–</td>
+</tr>
+</tbody>
+</table>
+<h3>Lessons</h3>
+<ul>
+<li>Push before launch: the server can only install what is on GitHub.</li>
+<li>Check the Summary panel before launching (AMI, storage, rules). "Free tier eligible" on the instance type did not stop a paid "Pro" image from being selected.</li>
+<li>Keep the private key outside the project folder and restrict it, or SSH refuses it.</li>
+<li>Write the expected result first; it made the duplicate-order bug obvious as a failed case.</li>
+</ul>
+<h1 id="release">Release note</h1><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Release</td>
+<td>ShopSmart AWS hosted release 1</td>
+</tr>
+<tr>
+<td>Date</td>
+<td>2026-11-20</td>
+</tr>
+<tr>
+<td>Prepared by</td>
+<td>Stephanie Joy Revano (individual task)</td>
+</tr>
+<tr>
+<td><strong>Release type</strong></td>
+<td><strong>Hosted</strong> (online), fictional data and simulated checkout only</td>
+</tr>
+<tr>
+<td><strong>Site URL</strong></td>
+<td><strong>https://18-140-130-174.sslip.io</strong></td>
+</tr>
+<tr>
+<td>Health URL</td>
+<td>https://18-140-130-174.sslip.io/api/health</td>
+</tr>
+<tr>
+<td>Repository / branch</td>
+<td>https://github.com/teptepphhh/COGNIX--ShopSmart-Challenge/tree/aws-deployment-revano</td>
+</tr>
+<tr>
+<td><strong>Code version</strong></td>
+<td><strong><code>446488d</code></strong> (first hosted deploy <code>0b1e671</code>; local baseline before this work <code>f4a0e54</code>)</td>
+</tr>
+<tr>
+<td>AWS account plan</td>
+<td><strong>Free plan</strong> (advanced sign-up), US$120 credits available and US$0.00 used on 2026-11-20 (usage estimates update about every 24 h), free access ends 2027-05-20; root MFA on; zero-spend budget alert</td>
+</tr>
+<tr>
+<td>Region</td>
+<td>Asia Pacific (Singapore) <code>ap-southeast-1</code></td>
+</tr>
+<tr>
+<td>AWS services</td>
+<td>Amazon EC2 (t3.micro <code>shopsmart-demo</code>, Ubuntu 24.04), Amazon EBS (20 GiB gp3), EC2 security group <code>shopsmart-web-sg</code>, EC2 key pair, public IPv4, AWS Budgets</td>
+</tr>
+<tr>
+<td>On the instance</td>
+<td>Nginx (HTTPS via Let's Encrypt, SPA rewrite, <code>/api</code> proxy), Node.js 22 + Express (systemd, 127.0.0.1:3000), PostgreSQL 16 (127.0.0.1:5432), Prisma 6 migrations</td>
+</tr>
+<tr>
+<td>Planned removal</td>
+<td>2026-11-27 (see <code>16-resource-register.md</code>)</td>
+</tr>
+</tbody>
+</table>
+<h3>Tested URLs</h3>
+<p><code>/</code>, <code>/products/2</code>, <code>/cart</code>, <code>/checkout</code>, <code>/login</code>, <code>/orders</code>, <code>/orders/1</code>, <code>/assistant</code>, <code>/api/health</code>, <code>/api/products</code>, <code>/api/orders/1</code>, <code>/api/auth/me</code>, <code>/api/assistant/status</code>, <code>http://18-140-130-174.sslip.io</code> (redirect), <code>http://18.140.130.174:3000/api/health</code> (blocked).</p>
+<h3>What is new in this release</h3>
+<ul>
+<li><strong>Customer sign-in</strong> (register, sign in, sign out) with scrypt password hashes and an <code>HttpOnly</code>, <code>Secure</code>, <code>SameSite=Lax</code> session cookie. Only a hash of the session token is stored.</li>
+<li><strong>Order ownership enforced by the API:</strong> checkout needs sign-in; the owner comes from the session; guest → 401, another customer → 404 on direct API requests. New <strong>My Orders</strong> and order detail pages.</li>
+<li><strong>Improvement 1:</strong> assistant shows <strong>catalog-only mode (no live AI)</strong> when the server has no provider key.</li>
+<li><strong>Improvement 2:</strong> <strong>idempotent checkout</strong>; a retried checkout with the same key returns the first order instead of creating a duplicate.</li>
+<li>Deployment files: <code>deploy/ec2-user-data.sh</code> (first setup), <code>deploy/update.sh</code> (backup → pull → migrate deploy → build → restart → check), <code>deploy/nginx-shopsmart.conf</code>, <code>deploy/shopsmart-api.service</code>.</li>
+<li>Migrations: <code>20261120090000_add_users_sessions_order_owner</code>, <code>20261120170000_order_idempotency_key</code>. Existing data is kept; no reset or reseed.</li>
+</ul>
+<h3>Verification summary (hosted)</h3>
+<p>All 8 checks passed: frontend and direct routes, API connection over HTTPS, catalog and cart, account and order ownership, simulated checkout validation, assistant grounding and fallback, restart/reboot and logs, secrets and credits. Details and evidence: <code>18-hosted-verification.md</code>. Improvements and retests: <code>24-improvements-and-retests.md</code>.</p>
+<p>Automated checks at <code>446488d</code>: lint clean, frontend 15/15, backend 76/76, build OK.</p>
+<h3>Known limitations</h3>
+<ul>
+<li><strong>Single EC2 host:</strong> no high availability. Database backups are manual <code>pg_dump</code> files on the same instance (taken before each update).</li>
+<li><strong>Public IP hostname:</strong> stopping and starting the instance would change the IP, the sslip.io hostname and the certificate. The instance stays running until grading.</li>
+<li><strong>No live AI provider:</strong> the assistant runs in catalog-only mode (clearly labelled).</li>
+<li><strong>The cart is not saved</strong> across a full page refresh (kept in browser memory, as before).</li>
+<li>Orders created before sign-in existed have no owner and cannot be read through the API.</li>
+<li><code>npm audit</code> findings from the starter dependencies are unchanged (upgrades were out of scope).</li>
+<li>Open defects D3 and D4 from the local release note are unchanged.</li>
+</ul>
+<h3>Operations</h3>
+<ul>
+<li>Update: <code>ssh -i %USERPROFILE%\.ssh\shopsmart-key.pem ubuntu@18.140.130.174</code>, then <code>sudo bash /opt/shopsmart/deploy/update.sh</code>.</li>
+<li>Logs: <code>sudo journalctl -u shopsmart-api -n 50</code>. Setup log: <code>/var/log/shopsmart-setup.log</code>.</li>
+<li>Backups: <code>/var/backups/shopsmart/</code> (postgres only).</li>
+</ul>
+<h3>Evidence index</h3>
+<p><code>10-pre-deploy-baseline.md</code>, <code>11-aws-account-record.md</code>, <code>15-auth-ownership-test.md</code> (local), <code>16-resource-register.md</code>, <code>18-hosted-verification.md</code>, <code>22-secrets-check.txt</code>, <code>23-decision-record.md</code>, <code>24-improvements-and-retests.md</code>, <code>04b-deployment-diagram-aws.svg/.png</code>, <code>screenshots/10-*</code> to <code>25-*</code> (redacted).</p>
+</body></html>

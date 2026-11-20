@@ -1,3 +1,5 @@
+> **Superseded (2026-11-20):** this is the earlier *local* release candidate. The hosted AWS release is described in `RELEASE_NOTE_AWS.md`.
+
 # ShopSmart Release Note
 
 ## Version and date

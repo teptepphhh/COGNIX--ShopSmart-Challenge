@@ -14,6 +14,10 @@ No credentials, passwords or account ID are recorded here.
 
 Tags on the instance and volume: `Name=shopsmart-demo`, `Project=ShopSmart`, `Owner=Revano`, `RemoveBy=2026-11-27`.
 
+## Demo dates
+
+- Deployed: 2026-11-20 16:31 · Demonstrated and submitted: 2026-11-20 (deadline 23:59) · Kept running for grading until **2026-11-27**, then removed.
+
 ## Cost notes
 
 - The instance, its public IPv4 address and the 20 GiB volume use credits every hour while they exist, even when nobody visits the site.
