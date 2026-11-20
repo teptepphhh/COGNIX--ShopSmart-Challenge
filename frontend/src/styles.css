@@ -74,3 +74,11 @@ form { display: grid; gap: 1rem; }
   .toolbar, .product-grid { grid-template-columns: 1fr; }
   .cart-item { grid-template-columns: 1fr; }
 }
+/* Sign-in and My Orders */
+.nav-button { background: transparent; color: #d6e3ee; padding: 0; font-weight: 400; }
+.nav-button:hover { background: transparent; color: #42d6c5; }
+.auth-layout { max-width: 460px; margin: 0 auto; }
+.order-list { list-style: none; padding: 0; display: grid; gap: .7rem; }
+.order-list a { display: grid; grid-template-columns: 1fr 1.6fr 1fr auto; gap: 1rem; align-items: center; background: white; border: 1px solid #dce3eb; border-radius: .8rem; padding: 1rem; text-decoration: none; }
+.order-list a:hover { border-color: #0f766e; }
+@media (max-width: 700px) { .order-list a { grid-template-columns: 1fr 1fr; } }

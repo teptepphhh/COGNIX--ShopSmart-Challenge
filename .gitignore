@@ -8,3 +8,7 @@ coverage/
 .vscode/
 backend/prisma/*.db
 backend/prisma/*.db-journal
+
+# Local database backups (may contain data; never commit)
+backups/
+*.dump

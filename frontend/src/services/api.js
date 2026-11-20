@@ -10,6 +10,8 @@ async function request(path, { timeoutMs = REQUEST_TIMEOUT_MS, ...options } = {}
   try {
     response = await fetch(`${API_URL}${path}`, {
       ...options,
+      // Sends the httpOnly sign-in cookie. JavaScript never reads the cookie itself.
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json', ...options.headers },
       signal: controller.signal
     });
@@ -24,6 +26,7 @@ async function request(path, { timeoutMs = REQUEST_TIMEOUT_MS, ...options } = {}
     clearTimeout(timer);
   }
 
+  if (response.status === 204) return null;
   const data = await response.json().catch(() => null);
   if (!response.ok) {
     const message = data?.error?.message || `Request failed with status ${response.status}.`;
@@ -39,6 +42,12 @@ export const api = {
   getProducts: (query = '') => request(`/products${query ? `?search=${encodeURIComponent(query)}` : ''}`),
   getProduct: (id) => request(`/products/${id}`),
   createOrder: (order) => request('/orders', { method: 'POST', body: JSON.stringify(order) }),
+  getMyOrders: () => request('/orders'),
+  getOrder: (id) => request(`/orders/${id}`),
+  register: (account) => request('/auth/register', { method: 'POST', body: JSON.stringify(account) }),
+  login: (credentials) => request('/auth/login', { method: 'POST', body: JSON.stringify(credentials) }),
+  logout: () => request('/auth/logout', { method: 'POST' }),
+  getCurrentUser: () => request('/auth/me'),
   askAssistant: (question) => request('/assistant/questions', {
     method: 'POST', body: JSON.stringify({ question })
   })

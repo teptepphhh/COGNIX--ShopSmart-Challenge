@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import StatusMessage from '../components/StatusMessage.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
 import { api } from '../services/api.js';
 import { calculateItemSubtotal } from '../utils/cart.js';
 
 export default function CheckoutPage() {
   const { cart, total, clearCart } = useCart();
-  const [form, setForm] = useState({ customerName: '', email: '', address: '' });
+  const { user, checking, signedOut } = useAuth();
+  const [form, setForm] = useState({ customerName: user?.name || '', email: user?.email || '', address: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [order, setOrder] = useState(null);
@@ -28,6 +30,8 @@ export default function CheckoutPage() {
       setOrder(created);
       clearCart();
     } catch (caught) {
+      // The session may have expired. The cart is kept so the customer can sign in again.
+      if (caught.status === 401) signedOut();
       setError(caught.message);
     } finally {
       setSubmitting(false);
@@ -40,8 +44,18 @@ export default function CheckoutPage() {
       <h1>Thank you, {order.customerName}!</h1>
       <p>Your simulated order number is <strong>#{order.id}</strong>.</p>
       <p>Total: <strong>₱{Number(order.total).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</strong></p>
-      <Link className="button" to="/">Continue shopping</Link>
+      <p><Link className="button" to={`/orders/${order.id}`}>View order</Link> <Link className="button secondary" to="/">Continue shopping</Link></p>
     </section>
+  );
+
+  if (checking) return <section><StatusMessage>Checking your sign-in…</StatusMessage></section>;
+  if (!user && cart.length > 0) return (
+    <section><div className="empty-state">
+      <p className="eyebrow">SIGN-IN REQUIRED</p>
+      <h1>Please sign in to place your order</h1>
+      <p>Your cart is kept while you sign in. Orders are saved to your account so only you can view them.</p>
+      <Link className="button" to="/login?next=/checkout">Sign in or register</Link>
+    </div></section>
   );
 
   if (cart.length === 0) return <section><div className="empty-state"><h1>Your cart is empty</h1><Link className="button" to="/">Browse products</Link></div></section>;
