@@ -11,6 +11,18 @@ function toOrderResponse(order) {
   };
 }
 
+// Improvement 2: a checkout retried after a timeout must not create a second order.
+const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9_-]{8,100}$/;
+
+function findOrderByKey(db, userId, idempotencyKey) {
+  return db.order.findFirst({ where: { userId, idempotencyKey }, include: { items: true } });
+}
+
+function replay(response, order) {
+  response.setHeader('Idempotent-Replayed', 'true');
+  return response.status(200).json(toOrderResponse(order));
+}
+
 export function createOrdersRouter({ db, loadUser }) {
   const router = Router();
   router.use(loadUser);
@@ -18,7 +30,16 @@ export function createOrdersRouter({ db, loadUser }) {
   router.use(requireUser);
 
   router.post('/', async (request, response, next) => {
+    const idempotencyKey = request.get('Idempotency-Key') || null;
     try {
+      if (idempotencyKey !== null && !IDEMPOTENCY_KEY_PATTERN.test(idempotencyKey)) {
+        return response.status(400).json({ error: { code: 'INVALID_IDEMPOTENCY_KEY', message: 'Idempotency-Key must be 8 to 100 letters, digits, - or _.' } });
+      }
+      // Same customer, same key: this is a retry of a checkout that already succeeded.
+      if (idempotencyKey) {
+        const existing = await findOrderByKey(db, request.user.id, idempotencyKey);
+        if (existing) return replay(response, existing);
+      }
       const parsed = orderSchema.safeParse(request.body);
       if (!parsed.success) return response.status(422).json({ error: { code: 'INVALID_ORDER', message: 'Check the customer and cart information.', details: parsed.error.flatten() } });
 
@@ -45,13 +66,24 @@ export function createOrdersRouter({ db, loadUser }) {
             customerName: parsed.data.customerName, email: parsed.data.email, address: parsed.data.address, total,
             // The owner comes from the server session, never from the request body.
             userId: request.user.id,
+            idempotencyKey,
             items: { create: normalizedItems.map((item) => ({ productId: item.productId, quantity: item.quantity, unitPrice: item.product.price })) }
           },
           include: { items: true }
         });
       });
       response.status(201).json(toOrderResponse(order));
-    } catch (error) { next(error); }
+    } catch (error) {
+      // Two identical requests at the same moment: the unique (userId, idempotencyKey) index lets only
+      // one transaction commit. The other is rolled back (stock included) and answers with the saved order.
+      if (idempotencyKey && error?.code === 'P2002') {
+        try {
+          const existing = await findOrderByKey(db, request.user.id, idempotencyKey);
+          if (existing) return replay(response, existing);
+        } catch (lookupError) { return next(lookupError); }
+      }
+      next(error);
+    }
   });
 
   // Only the signed-in customer's own orders.

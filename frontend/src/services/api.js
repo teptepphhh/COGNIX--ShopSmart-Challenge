@@ -41,7 +41,12 @@ async function request(path, { timeoutMs = REQUEST_TIMEOUT_MS, ...options } = {}
 export const api = {
   getProducts: (query = '') => request(`/products${query ? `?search=${encodeURIComponent(query)}` : ''}`),
   getProduct: (id) => request(`/products/${id}`),
-  createOrder: (order) => request('/orders', { method: 'POST', body: JSON.stringify(order) }),
+  // Improvement 2: the same key is sent again if the customer retries the same checkout.
+  createOrder: (order, idempotencyKey) => request('/orders', {
+    method: 'POST', body: JSON.stringify(order),
+    headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}
+  }),
+  getAssistantStatus: () => request('/assistant/status'),
   getMyOrders: () => request('/orders'),
   getOrder: (id) => request(`/orders/${id}`),
   register: (account) => request('/auth/register', { method: 'POST', body: JSON.stringify(account) }),

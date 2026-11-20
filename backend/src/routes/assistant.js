@@ -23,12 +23,24 @@ function getProvider() {
   return provider;
 }
 
+// Improvement 1: tell the UI whether a live AI provider is configured on this server,
+// so a catalog-only answer is never presented as a live AI answer.
+export function assistantMode(currentProvider) {
+  return currentProvider ? 'live-ai' : 'catalog-only';
+}
+
+router.get('/status', (_request, response) => {
+  response.json({ mode: assistantMode(getProvider()) });
+});
+
 router.post('/questions', assistantLimiter, async (request, response, next) => {
   try {
     const parsed = assistantQuestionSchema.safeParse(request.body);
     if (!parsed.success) return response.status(422).json({ error: { code: 'INVALID_QUESTION', message: 'Question must contain between 3 and 300 characters.' } });
     const products = await prisma.product.findMany({ where: { active: true, stock: { gt: 0 } }, orderBy: { price: 'asc' } });
-    response.json(await answerQuestion({ question: parsed.data.question, products, provider: getProvider() }));
+    const currentProvider = getProvider();
+    const result = await answerQuestion({ question: parsed.data.question, products, provider: currentProvider });
+    response.json({ ...result, mode: assistantMode(currentProvider) });
   } catch (error) { next(error); }
 });
 

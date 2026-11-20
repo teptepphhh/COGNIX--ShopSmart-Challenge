@@ -33,8 +33,11 @@ model Order {
   // Owner of the order. Optional so that orders made before sign-in existed are kept.
   userId       Int?
   user         User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  // Sent by the browser for one checkout attempt. A retry with the same key returns the first order.
+  idempotencyKey String?
 
   @@index([userId])
+  @@unique([userId, idempotencyKey])
 }
 
 model OrderItem {

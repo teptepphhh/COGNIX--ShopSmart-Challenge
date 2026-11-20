@@ -82,3 +82,7 @@ form { display: grid; gap: 1rem; }
 .order-list a { display: grid; grid-template-columns: 1fr 1.6fr 1fr auto; gap: 1rem; align-items: center; background: white; border: 1px solid #dce3eb; border-radius: .8rem; padding: 1rem; text-decoration: none; }
 .order-list a:hover { border-color: #0f766e; }
 @media (max-width: 700px) { .order-list a { grid-template-columns: 1fr 1fr; } }
+/* Improvement 1: assistant mode label */
+.mode-badge { border-radius: .6rem; padding: .7rem .9rem; margin: .5rem 0 1rem; border: 1px solid; }
+.mode-badge.catalog { background: #fffaeb; border-color: #f79009; color: #7a2e0e; }
+.mode-badge.live { background: #ecfdf3; border-color: #12b76a; color: #05603a; }

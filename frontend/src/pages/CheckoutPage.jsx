@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import StatusMessage from '../components/StatusMessage.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -13,6 +13,10 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [order, setOrder] = useState(null);
+  // Improvement 2: one key per cart content. A retry of the same cart (for example after a timeout)
+  // reuses the key, so the server returns the first order instead of creating a duplicate.
+  const cartSignature = cart.map((item) => `${item.productId}x${item.quantity}`).join(',');
+  const idempotencyKey = useMemo(() => `checkout-${crypto.randomUUID()}`, [cartSignature]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function updateField(event) {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
@@ -26,7 +30,7 @@ export default function CheckoutPage() {
       const created = await api.createOrder({
         ...form,
         items: cart.map((item) => ({ productId: item.productId, quantity: item.quantity }))
-      });
+      }, idempotencyKey);
       setOrder(created);
       clearCart();
     } catch (caught) {
