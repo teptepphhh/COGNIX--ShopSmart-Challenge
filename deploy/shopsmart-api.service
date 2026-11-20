@@ -1,0 +1,18 @@
+[Unit]
+Description=ShopSmart Express API
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+User=shopsmart
+Group=shopsmart
+WorkingDirectory=/opt/shopsmart/backend
+# Server-only settings (DATABASE_URL etc.). Not in git, readable only by root and the shopsmart group.
+EnvironmentFile=/etc/shopsmart/backend.env
+ExecStart=/usr/bin/node src/server.js
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

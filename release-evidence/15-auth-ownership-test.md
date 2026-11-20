@@ -1,7 +1,7 @@
 # Sign-in and order ownership – local test record
 
 **Date:** 2026-11-20
-**Branch:** `ASC_AWS_DEPLOY_REVANO` (based on `f4a0e54`)
+**Branch:** `aws-deployment-revano` (based on `f4a0e54`; tested code committed as `49177c9`)
 **Tested by:** Stephanie Joy Revano (individual)
 **Environment:** local (Windows, Node 22.20.0, PostgreSQL 18), http://localhost:5173 and http://localhost:3000
 **Data:** fictional test customers only. Checkout is simulated.
